@@ -34,7 +34,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 Plans:
 - [ ] 01-01-PLAN.md -- Config loader with presets, Pydantic validation, and ScreenedStock data model
-- [ ] 01-02-PLAN.md -- Finnhub API key loading in credentials.py
+- [x] 01-02-PLAN.md -- Finnhub API key loading in credentials.py
 
 ### Phase 2: Data Sources
 **Goal**: The screener can fetch fundamental data from Finnhub and compute technical indicators from Alpaca bars, handling rate limits and missing data gracefully
@@ -103,7 +103,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 0/2 | Not started | - |
+| 1. Foundation | 1/2 | In progress | - |
 | 2. Data Sources | 0/2 | Not started | - |
 | 3. Screening Pipeline | 0/3 | Not started | - |
 | 4. Output and Display | 0/1 | Not started | - |
