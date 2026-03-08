@@ -33,7 +33,7 @@
 ### Output
 
 - [ ] **OUTP-01**: Screener displays results as a rich formatted table showing symbol, price, volume, key metrics, and score
-- [ ] **OUTP-02**: Screener shows filter summary with per-stage elimination counts (universe → price → volume → fundamentals → technicals → final)
+- [ ] **OUTP-02**: Screener shows filter summary with per-stage elimination counts (universe -> price -> volume -> fundamentals -> technicals -> final)
 - [ ] **OUTP-03**: Screener can export filtered symbols to config/symbol_list.txt via --update-symbols flag
 - [ ] **OUTP-04**: Screener shows progress indicator during rate-limited API calls
 
@@ -83,40 +83,40 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FILT-01 | — | Pending |
-| FILT-02 | — | Pending |
-| FILT-03 | — | Pending |
-| FILT-04 | — | Pending |
-| FILT-05 | — | Pending |
-| FILT-06 | — | Pending |
-| FILT-07 | — | Pending |
-| FILT-08 | — | Pending |
-| FILT-09 | — | Pending |
-| FILT-10 | — | Pending |
-| SCOR-01 | — | Pending |
-| SCOR-02 | — | Pending |
-| CONF-01 | — | Pending |
-| CONF-02 | — | Pending |
-| CONF-03 | — | Pending |
-| CONF-04 | — | Pending |
-| OUTP-01 | — | Pending |
-| OUTP-02 | — | Pending |
-| OUTP-03 | — | Pending |
-| OUTP-04 | — | Pending |
-| CLI-01 | — | Pending |
-| CLI-02 | — | Pending |
-| CLI-03 | — | Pending |
-| CLI-04 | — | Pending |
-| SAFE-01 | — | Pending |
-| SAFE-02 | — | Pending |
-| SAFE-03 | — | Pending |
-| SAFE-04 | — | Pending |
+| FILT-01 | Phase 3 | Pending |
+| FILT-02 | Phase 3 | Pending |
+| FILT-03 | Phase 3 | Pending |
+| FILT-04 | Phase 3 | Pending |
+| FILT-05 | Phase 3 | Pending |
+| FILT-06 | Phase 3 | Pending |
+| FILT-07 | Phase 3 | Pending |
+| FILT-08 | Phase 3 | Pending |
+| FILT-09 | Phase 3 | Pending |
+| FILT-10 | Phase 3 | Pending |
+| SCOR-01 | Phase 3 | Pending |
+| SCOR-02 | Phase 3 | Pending |
+| CONF-01 | Phase 1 | Pending |
+| CONF-02 | Phase 1 | Pending |
+| CONF-03 | Phase 1 | Pending |
+| CONF-04 | Phase 1 | Pending |
+| OUTP-01 | Phase 4 | Pending |
+| OUTP-02 | Phase 4 | Pending |
+| OUTP-03 | Phase 5 | Pending |
+| OUTP-04 | Phase 4 | Pending |
+| CLI-01 | Phase 5 | Pending |
+| CLI-02 | Phase 5 | Pending |
+| CLI-03 | Phase 5 | Pending |
+| CLI-04 | Phase 5 | Pending |
+| SAFE-01 | Phase 1 | Pending |
+| SAFE-02 | Phase 2 | Pending |
+| SAFE-03 | Phase 5 | Pending |
+| SAFE-04 | Phase 2 | Pending |
 
 **Coverage:**
 - v1 requirements: 28 total
-- Mapped to phases: 0
-- Unmapped: 28 (pending roadmap creation)
+- Mapped to phases: 28
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-07*
-*Last updated: 2026-03-07 after initial definition*
+*Last updated: 2026-03-07 after roadmap creation*
