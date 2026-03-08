@@ -12,7 +12,7 @@ This roadmap delivers a stock screening module for the Wheeely options wheel str
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Foundation** - YAML config with presets, Pydantic validation, data models, and Finnhub API key setup
+- [x] **Phase 1: Foundation** - YAML config with presets, Pydantic validation, data models, and Finnhub API key setup
 - [ ] **Phase 2: Data Sources** - Finnhub API client with rate limiting and Alpaca bar-based technical indicators
 - [ ] **Phase 3: Screening Pipeline** - All 10 filters, scoring engine, and pipeline orchestration with cheap-first ordering
 - [ ] **Phase 4: Output and Display** - Rich table rendering, filter elimination summary, and progress indicator
@@ -33,7 +33,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 2 plans
 
 Plans:
-- [ ] 01-01-PLAN.md -- Config loader with presets, Pydantic validation, and ScreenedStock data model
+- [x] 01-01-PLAN.md -- Config loader with presets, Pydantic validation, and ScreenedStock data model
 - [x] 01-02-PLAN.md -- Finnhub API key loading in credentials.py
 
 ### Phase 2: Data Sources
@@ -103,7 +103,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 1/2 | In progress | - |
+| 1. Foundation | 2/2 | Complete | 2026-03-08 |
 | 2. Data Sources | 0/2 | Not started | - |
 | 3. Screening Pipeline | 0/3 | Not started | - |
 | 4. Output and Display | 0/1 | Not started | - |

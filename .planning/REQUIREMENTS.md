@@ -25,10 +25,10 @@
 
 ### Configuration
 
-- [ ] **CONF-01**: User can define screening filter thresholds in a YAML config file (config/screener.yaml)
-- [ ] **CONF-02**: Screener ships with preset profiles: conservative, moderate, and aggressive (config/presets/)
-- [ ] **CONF-03**: User can override individual preset values with custom values in screener.yaml
-- [ ] **CONF-04**: Config is validated via Pydantic models with clear error messages for invalid values
+- [x] **CONF-01**: User can define screening filter thresholds in a YAML config file (config/screener.yaml)
+- [x] **CONF-02**: Screener ships with preset profiles: conservative, moderate, and aggressive (config/presets/)
+- [x] **CONF-03**: User can override individual preset values with custom values in screener.yaml
+- [x] **CONF-04**: Config is validated via Pydantic models with clear error messages for invalid values
 
 ### Output
 
@@ -95,10 +95,10 @@
 | FILT-10 | Phase 3 | Pending |
 | SCOR-01 | Phase 3 | Pending |
 | SCOR-02 | Phase 3 | Pending |
-| CONF-01 | Phase 1 | Pending |
-| CONF-02 | Phase 1 | Pending |
-| CONF-03 | Phase 1 | Pending |
-| CONF-04 | Phase 1 | Pending |
+| CONF-01 | Phase 1 | Complete |
+| CONF-02 | Phase 1 | Complete |
+| CONF-03 | Phase 1 | Complete |
+| CONF-04 | Phase 1 | Complete |
 | OUTP-01 | Phase 4 | Pending |
 | OUTP-02 | Phase 4 | Pending |
 | OUTP-03 | Phase 5 | Pending |
