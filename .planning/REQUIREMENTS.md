@@ -1,0 +1,122 @@
+# Requirements: Wheeely Stock Screener
+
+**Defined:** 2026-03-07
+**Core Value:** Automatically identify wheel-strategy-suitable stocks by combining fundamental health checks with technical screening
+
+## v1 Requirements
+
+### Screening Filters
+
+- [ ] **FILT-01**: Screener filters stocks by market cap minimum (e.g., mid-cap and above) using Finnhub data
+- [ ] **FILT-02**: Screener filters stocks by debt/equity ratio maximum using Finnhub data
+- [ ] **FILT-03**: Screener filters stocks by net margin minimum (positive) using Finnhub data
+- [ ] **FILT-04**: Screener filters stocks by quarterly sales growth minimum using Finnhub data
+- [ ] **FILT-05**: Screener filters stocks by price range (min/max) using Alpaca market data
+- [ ] **FILT-06**: Screener filters stocks by minimum average daily volume using Alpaca market data
+- [ ] **FILT-07**: Screener filters stocks by RSI(14) maximum (not overbought) using Alpaca bars + ta library
+- [ ] **FILT-08**: Screener filters stocks where price is above SMA(200) using Alpaca bars + ta library
+- [ ] **FILT-09**: Screener filters stocks that are optionable (have listed options) using Alpaca options data
+- [ ] **FILT-10**: Screener filters stocks by GICS sector/industry using Finnhub profile data
+
+### Scoring
+
+- [ ] **SCOR-01**: Screener scores each passing stock for wheel strategy suitability based on premium yield potential, capital efficiency, and fundamental strength
+- [ ] **SCOR-02**: Screener ranks results by score descending
+
+### Configuration
+
+- [ ] **CONF-01**: User can define screening filter thresholds in a YAML config file (config/screener.yaml)
+- [ ] **CONF-02**: Screener ships with preset profiles: conservative, moderate, and aggressive (config/presets/)
+- [ ] **CONF-03**: User can override individual preset values with custom values in screener.yaml
+- [ ] **CONF-04**: Config is validated via Pydantic models with clear error messages for invalid values
+
+### Output
+
+- [ ] **OUTP-01**: Screener displays results as a rich formatted table showing symbol, price, volume, key metrics, and score
+- [ ] **OUTP-02**: Screener shows filter summary with per-stage elimination counts (universe → price → volume → fundamentals → technicals → final)
+- [ ] **OUTP-03**: Screener can export filtered symbols to config/symbol_list.txt via --update-symbols flag
+- [ ] **OUTP-04**: Screener shows progress indicator during rate-limited API calls
+
+### CLI Integration
+
+- [ ] **CLI-01**: User can run screener standalone via `run-screener` CLI command
+- [ ] **CLI-02**: User can run screener before strategy via `run-strategy --screen` flag
+- [ ] **CLI-03**: Screener CLI accepts --update-symbols flag to write results to symbol_list.txt
+- [ ] **CLI-04**: Screener CLI accepts --output-only flag (default) to display results without updating files
+
+### Data & Safety
+
+- [ ] **SAFE-01**: Finnhub API key is loaded from .env file (FINNHUB_API_KEY)
+- [ ] **SAFE-02**: Finnhub API calls are rate-limited to respect 60 calls/min free tier limit
+- [ ] **SAFE-03**: Symbol list export protects actively-traded symbols (short puts, assigned shares, short calls) from removal
+- [ ] **SAFE-04**: Screener handles missing/null Finnhub metric values gracefully with fallback key chains
+
+## v2 Requirements
+
+### Enhanced Output
+
+- **OUTP-05**: Screener shows options chain preview alongside each result (best put strike, premium, delta)
+- **OUTP-06**: Screener supports --dry-run mode showing what would change in symbol_list.txt
+
+### Performance
+
+- **PERF-01**: Screener caches Finnhub responses with configurable TTL to avoid repeated API calls
+- **PERF-02**: Screener supports --verbose flag showing per-symbol filter decisions
+
+### Advanced Filters
+
+- **FILT-11**: User can define custom filter expressions beyond predefined fields
+
+## Out of Scope
+
+| Feature | Reason |
+|---------|--------|
+| Real-time streaming screener | Batch screening sufficient for wheel strategy (trades weekly, not intraday) |
+| Web dashboard | CLI-only tool; web UI adds major complexity |
+| Backtesting engine | Separate domain; doubles project scope |
+| AI/ML screening | Over-engineering; rule-based filters are transparent and debuggable |
+| Multi-broker support | Only Alpaca is used; abstraction adds no value |
+| Alert/notification system | Screener runs on-demand, not continuously |
+| Finviz scraping | Using Finnhub API instead for reliable fundamental data |
+
+## Traceability
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| FILT-01 | — | Pending |
+| FILT-02 | — | Pending |
+| FILT-03 | — | Pending |
+| FILT-04 | — | Pending |
+| FILT-05 | — | Pending |
+| FILT-06 | — | Pending |
+| FILT-07 | — | Pending |
+| FILT-08 | — | Pending |
+| FILT-09 | — | Pending |
+| FILT-10 | — | Pending |
+| SCOR-01 | — | Pending |
+| SCOR-02 | — | Pending |
+| CONF-01 | — | Pending |
+| CONF-02 | — | Pending |
+| CONF-03 | — | Pending |
+| CONF-04 | — | Pending |
+| OUTP-01 | — | Pending |
+| OUTP-02 | — | Pending |
+| OUTP-03 | — | Pending |
+| OUTP-04 | — | Pending |
+| CLI-01 | — | Pending |
+| CLI-02 | — | Pending |
+| CLI-03 | — | Pending |
+| CLI-04 | — | Pending |
+| SAFE-01 | — | Pending |
+| SAFE-02 | — | Pending |
+| SAFE-03 | — | Pending |
+| SAFE-04 | — | Pending |
+
+**Coverage:**
+- v1 requirements: 28 total
+- Mapped to phases: 0
+- Unmapped: 28 (pending roadmap creation)
+
+---
+*Requirements defined: 2026-03-07*
+*Last updated: 2026-03-07 after initial definition*
