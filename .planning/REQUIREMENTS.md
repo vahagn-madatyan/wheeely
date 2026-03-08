@@ -49,7 +49,7 @@
 - [x] **SAFE-01**: Finnhub API key is loaded from .env file (FINNHUB_API_KEY)
 - [ ] **SAFE-02**: Finnhub API calls are rate-limited to respect 60 calls/min free tier limit
 - [ ] **SAFE-03**: Symbol list export protects actively-traded symbols (short puts, assigned shares, short calls) from removal
-- [ ] **SAFE-04**: Screener handles missing/null Finnhub metric values gracefully with fallback key chains
+- [x] **SAFE-04**: Screener handles missing/null Finnhub metric values gracefully with fallback key chains
 
 ## v2 Requirements
 
@@ -110,7 +110,7 @@
 | SAFE-01 | Phase 1 | Complete |
 | SAFE-02 | Phase 2 | Pending |
 | SAFE-03 | Phase 5 | Pending |
-| SAFE-04 | Phase 2 | Pending |
+| SAFE-04 | Phase 2 | Complete |
 
 **Coverage:**
 - v1 requirements: 28 total
