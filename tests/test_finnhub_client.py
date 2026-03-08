@@ -84,7 +84,8 @@ class TestRetry429:
         exc_429 = _make_api_exception(429, "Rate limit exceeded")
         mock_func = MagicMock(side_effect=[exc_429, {"result": "ok"}])
 
-        with patch("screener.finnhub_client.finnhub"):
+        with patch("screener.finnhub_client.finnhub") as mock_finnhub:
+            mock_finnhub.FinnhubAPIException = finnhub.FinnhubAPIException
             with patch("screener.finnhub_client.require_finnhub_key", return_value="fake"):
                 client = FinnhubClient(api_key="fake")
                 client._last_call_time = 0.0
@@ -108,7 +109,8 @@ class TestRetry429:
         exc_429_2 = _make_api_exception(429, "Rate limit exceeded again")
         mock_func = MagicMock(side_effect=[exc_429_1, exc_429_2])
 
-        with patch("screener.finnhub_client.finnhub"):
+        with patch("screener.finnhub_client.finnhub") as mock_finnhub:
+            mock_finnhub.FinnhubAPIException = finnhub.FinnhubAPIException
             with patch("screener.finnhub_client.require_finnhub_key", return_value="fake"):
                 client = FinnhubClient(api_key="fake")
                 client._last_call_time = 0.0
@@ -137,7 +139,8 @@ class TestNon429Exception:
         exc_403 = _make_api_exception(403, "Forbidden")
         mock_func = MagicMock(side_effect=exc_403)
 
-        with patch("screener.finnhub_client.finnhub"):
+        with patch("screener.finnhub_client.finnhub") as mock_finnhub:
+            mock_finnhub.FinnhubAPIException = finnhub.FinnhubAPIException
             with patch("screener.finnhub_client.require_finnhub_key", return_value="fake"):
                 client = FinnhubClient(api_key="fake")
                 client._last_call_time = 0.0
