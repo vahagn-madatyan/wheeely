@@ -1,4 +1,4 @@
-"""Screening pipeline filter functions and stage runners.
+"""Screening pipeline: filter functions, scoring engine, and pipeline orchestrator.
 
 Each filter function takes a ScreenedStock and ScreenerConfig, returns a FilterResult.
 Filters never raise — they return passed=False with a descriptive reason on failure
@@ -6,16 +6,21 @@ or missing data.
 
 Stage 1 filters are cheap (Alpaca-based): price, volume, RSI, SMA200.
 Stage 2 filters are expensive (Finnhub-based): market cap, D/E, margin, growth, sector, optionable.
+Stage 3: score survivors and sort.
 """
 
 import logging as stdlib_logging
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from alpaca.trading.enums import AssetClass, AssetStatus
+from alpaca.trading.requests import GetAssetsRequest
 
 from models.screened_stock import FilterResult, ScreenedStock
 from screener.config_loader import ScreenerConfig
 from screener.finnhub_client import FinnhubClient, extract_metric
+from screener.market_data import compute_indicators, fetch_daily_bars
 
 logger = stdlib_logging.getLogger(__name__)
 
@@ -675,3 +680,160 @@ def compute_wheel_score(
     )
 
     return round(raw * 100, 2)
+
+
+# ---------------------------------------------------------------------------
+# Universe fetching
+# ---------------------------------------------------------------------------
+
+
+def fetch_universe(trade_client) -> tuple[list[str], set[str]]:
+    """Fetch the full tradable universe and optionable symbol set from Alpaca.
+
+    Makes two API calls:
+    1. All active US equity assets, filtered to tradable.
+    2. All assets with options_enabled attribute, to build optionable set.
+
+    Args:
+        trade_client: Alpaca TradingClient instance.
+
+    Returns:
+        Tuple of (all_symbols, optionable_set).
+    """
+    # Call 1: all active US equities
+    all_assets = trade_client.get_all_assets(
+        GetAssetsRequest(asset_class=AssetClass.US_EQUITY, status=AssetStatus.ACTIVE)
+    )
+    all_symbols = [a.symbol for a in all_assets if a.tradable]
+
+    # Call 2: optionable assets
+    optionable_assets = trade_client.get_all_assets(
+        GetAssetsRequest(attributes="options_enabled")
+    )
+    optionable_set = {a.symbol for a in optionable_assets}
+
+    logger.info(
+        "Universe: %d tradable symbols, %d optionable",
+        len(all_symbols),
+        len(optionable_set),
+    )
+
+    return all_symbols, optionable_set
+
+
+def load_symbol_list(path: str = "config/symbol_list.txt") -> list[str]:
+    """Read symbols from a text file (one per line).
+
+    Strips whitespace, skips empty lines and lines starting with ``#``.
+
+    Args:
+        path: File path to the symbol list.
+
+    Returns:
+        List of symbol strings, or empty list if file does not exist.
+    """
+    p = Path(path)
+    if not p.exists():
+        return []
+
+    symbols: list[str] = []
+    for line in p.read_text().splitlines():
+        stripped = line.strip()
+        if stripped and not stripped.startswith("#"):
+            symbols.append(stripped)
+    return symbols
+
+
+# ---------------------------------------------------------------------------
+# Pipeline orchestrator
+# ---------------------------------------------------------------------------
+
+
+def run_pipeline(
+    trade_client,
+    stock_client,
+    finnhub_client: FinnhubClient,
+    config: ScreenerConfig,
+    symbol_list_path: str = "config/symbol_list.txt",
+) -> list[ScreenedStock]:
+    """Run the full 3-stage screening pipeline.
+
+    Steps:
+    1. Fetch universe from Alpaca (all tradable symbols + optionable set).
+    2. Merge symbol_list.txt into the universe.
+    3. Fetch daily bars for the entire universe.
+    4. For each symbol: create ScreenedStock, compute indicators & HV.
+    5. Filter: Stage 1 (cheap) -> Stage 2 (expensive).
+    6. Score all passing stocks.
+    7. Sort: scored stocks descending, then unscored.
+
+    Args:
+        trade_client: Alpaca TradingClient for asset universe fetching.
+        stock_client: Alpaca StockHistoricalDataClient for bar data.
+        finnhub_client: FinnhubClient for fundamental data.
+        config: ScreenerConfig with all filter thresholds.
+        symbol_list_path: Path to existing symbol list to merge.
+
+    Returns:
+        All ScreenedStock objects (passing + eliminated), sorted by score descending.
+    """
+    # Step 1: Fetch universe
+    all_symbols, optionable_set = fetch_universe(trade_client)
+
+    # Step 2: Merge existing symbol list
+    existing = load_symbol_list(symbol_list_path)
+    universe = sorted(set(all_symbols) | set(existing))
+    logger.info("Merged universe: %d symbols (including %d from symbol list)", len(universe), len(existing))
+
+    # Step 3: Fetch daily bars for the entire universe
+    bars = fetch_daily_bars(stock_client, universe, num_bars=250, batch_size=20)
+
+    # Step 4: Build ScreenedStock objects and populate indicators
+    stocks: list[ScreenedStock] = []
+    for sym in universe:
+        stock = ScreenedStock.from_symbol(sym)
+
+        if sym in bars:
+            indicators = compute_indicators(bars[sym])
+            stock.price = indicators.get("price")
+            stock.avg_volume = indicators.get("avg_volume")
+            stock.rsi_14 = indicators.get("rsi_14")
+            stock.sma_200 = indicators.get("sma_200")
+            stock.above_sma200 = indicators.get("above_sma200")
+            stock.hv_30 = compute_historical_volatility(bars[sym])
+        else:
+            # No bar data — record and skip further stages
+            stock.filter_results.append(
+                FilterResult(
+                    filter_name="bar_data",
+                    passed=False,
+                    reason="No bar data available",
+                )
+            )
+            stocks.append(stock)
+            continue
+
+        # Step 5: Filter stages
+        stage1_passed = run_stage_1_filters(stock, config)
+
+        if stage1_passed:
+            run_stage_2_filters(stock, config, finnhub_client, optionable_set)
+
+        stocks.append(stock)
+
+    # Step 6: Score passing stocks
+    passing = [s for s in stocks if s.passed_all_filters]
+    for stock in passing:
+        stock.score = compute_wheel_score(stock, passing)
+
+    logger.info(
+        "Pipeline complete: %d total, %d passing, %d eliminated",
+        len(stocks),
+        len(passing),
+        len(stocks) - len(passing),
+    )
+
+    # Step 7: Sort — scored first (descending), then unscored
+    stocks.sort(key=lambda s: (s.score is not None, s.score or 0), reverse=True)
+
+    return stocks
