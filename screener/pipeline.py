@@ -21,6 +21,15 @@ logger = stdlib_logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
+# Scoring weights
+# ---------------------------------------------------------------------------
+
+WEIGHT_CAPITAL_EFFICIENCY = 0.45
+WEIGHT_VOLATILITY = 0.35
+WEIGHT_FUNDAMENTALS = 0.20
+
+
+# ---------------------------------------------------------------------------
 # Stage 1 filters (cheap, Alpaca-based)
 # ---------------------------------------------------------------------------
 
@@ -599,3 +608,70 @@ def run_stage_2_filters(
         stock.filter_results.append(r)
 
     return all(r.passed for r in results)
+
+
+# ---------------------------------------------------------------------------
+# Scoring engine
+# ---------------------------------------------------------------------------
+
+
+def compute_wheel_score(
+    stock: ScreenedStock,
+    all_passing_stocks: list[ScreenedStock],
+) -> float:
+    """Compute a wheel-suitability score (0-100) for a stock.
+
+    Three weighted components:
+    - Capital efficiency (0.45): Lower price = higher score (normalized across peers).
+    - Volatility proxy (0.35): Higher HV = higher score (normalized across peers).
+    - Fundamental strength (0.20): Average of net margin, sales growth, debt/equity sub-scores.
+
+    Args:
+        stock: The ScreenedStock to score.
+        all_passing_stocks: All stocks that passed filters (for normalization).
+
+    Returns:
+        Score as a float in [0, 100], rounded to 2 decimal places.
+    """
+    # --- Capital efficiency (lower price = higher score) ---
+    prices = [s.price for s in all_passing_stocks if s.price is not None]
+    min_p = min(prices) if prices else 0
+    max_p = max(prices) if prices else 0
+
+    if max_p == min_p or stock.price is None:
+        cap_eff = 0.5
+    else:
+        cap_eff = 1.0 - (stock.price - min_p) / (max_p - min_p)
+
+    # --- Volatility proxy (higher HV = higher score) ---
+    hvs = [s.hv_30 for s in all_passing_stocks if s.hv_30 is not None]
+    min_hv = min(hvs) if hvs else 0
+    max_hv = max(hvs) if hvs else 0
+
+    if stock.hv_30 is None or max_hv == min_hv:
+        vol_score = 0.5
+    else:
+        vol_score = (stock.hv_30 - min_hv) / (max_hv - min_hv)
+
+    # --- Fundamental strength (average of available sub-components) ---
+    fund_components: list[float] = []
+
+    if stock.net_margin is not None:
+        fund_components.append(min(stock.net_margin / 30.0, 1.0))
+
+    if stock.sales_growth is not None:
+        fund_components.append(min(max(stock.sales_growth, 0) / 30.0, 1.0))
+
+    if stock.debt_equity is not None:
+        fund_components.append(max(1.0 - stock.debt_equity, 0.0))
+
+    fund_score = sum(fund_components) / len(fund_components) if fund_components else 0.5
+
+    # --- Combine ---
+    raw = (
+        WEIGHT_CAPITAL_EFFICIENCY * cap_eff
+        + WEIGHT_VOLATILITY * vol_score
+        + WEIGHT_FUNDAMENTALS * fund_score
+    )
+
+    return round(raw * 100, 2)
