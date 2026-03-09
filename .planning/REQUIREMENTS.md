@@ -35,7 +35,7 @@
 - [x] **OUTP-01**: Screener displays results as a rich formatted table showing symbol, price, volume, key metrics, and score
 - [x] **OUTP-02**: Screener shows filter summary with per-stage elimination counts (universe -> price -> volume -> fundamentals -> technicals -> final)
 - [ ] **OUTP-03**: Screener can export filtered symbols to config/symbol_list.txt via --update-symbols flag
-- [ ] **OUTP-04**: Screener shows progress indicator during rate-limited API calls
+- [x] **OUTP-04**: Screener shows progress indicator during rate-limited API calls
 
 ### CLI Integration
 
@@ -102,7 +102,7 @@
 | OUTP-01 | Phase 4 | Complete |
 | OUTP-02 | Phase 4 | Complete |
 | OUTP-03 | Phase 5 | Pending |
-| OUTP-04 | Phase 4 | Pending |
+| OUTP-04 | Phase 4 | Complete |
 | CLI-01 | Phase 5 | Pending |
 | CLI-02 | Phase 5 | Pending |
 | CLI-03 | Phase 5 | Pending |
