@@ -7,16 +7,16 @@
 
 ### Screening Filters
 
-- [ ] **FILT-01**: Screener filters stocks by market cap minimum (e.g., mid-cap and above) using Finnhub data
-- [ ] **FILT-02**: Screener filters stocks by debt/equity ratio maximum using Finnhub data
-- [ ] **FILT-03**: Screener filters stocks by net margin minimum (positive) using Finnhub data
-- [ ] **FILT-04**: Screener filters stocks by quarterly sales growth minimum using Finnhub data
-- [ ] **FILT-05**: Screener filters stocks by price range (min/max) using Alpaca market data
-- [ ] **FILT-06**: Screener filters stocks by minimum average daily volume using Alpaca market data
-- [ ] **FILT-07**: Screener filters stocks by RSI(14) maximum (not overbought) using Alpaca bars + ta library
-- [ ] **FILT-08**: Screener filters stocks where price is above SMA(200) using Alpaca bars + ta library
-- [ ] **FILT-09**: Screener filters stocks that are optionable (have listed options) using Alpaca options data
-- [ ] **FILT-10**: Screener filters stocks by GICS sector/industry using Finnhub profile data
+- [x] **FILT-01**: Screener filters stocks by market cap minimum (e.g., mid-cap and above) using Finnhub data
+- [x] **FILT-02**: Screener filters stocks by debt/equity ratio maximum using Finnhub data
+- [x] **FILT-03**: Screener filters stocks by net margin minimum (positive) using Finnhub data
+- [x] **FILT-04**: Screener filters stocks by quarterly sales growth minimum using Finnhub data
+- [x] **FILT-05**: Screener filters stocks by price range (min/max) using Alpaca market data
+- [x] **FILT-06**: Screener filters stocks by minimum average daily volume using Alpaca market data
+- [x] **FILT-07**: Screener filters stocks by RSI(14) maximum (not overbought) using Alpaca bars + ta library
+- [x] **FILT-08**: Screener filters stocks where price is above SMA(200) using Alpaca bars + ta library
+- [x] **FILT-09**: Screener filters stocks that are optionable (have listed options) using Alpaca options data
+- [x] **FILT-10**: Screener filters stocks by GICS sector/industry using Finnhub profile data
 
 ### Scoring
 
@@ -83,16 +83,16 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FILT-01 | Phase 3 | Pending |
-| FILT-02 | Phase 3 | Pending |
-| FILT-03 | Phase 3 | Pending |
-| FILT-04 | Phase 3 | Pending |
-| FILT-05 | Phase 3 | Pending |
-| FILT-06 | Phase 3 | Pending |
-| FILT-07 | Phase 3 | Pending |
-| FILT-08 | Phase 3 | Pending |
-| FILT-09 | Phase 3 | Pending |
-| FILT-10 | Phase 3 | Pending |
+| FILT-01 | Phase 3 | Complete |
+| FILT-02 | Phase 3 | Complete |
+| FILT-03 | Phase 3 | Complete |
+| FILT-04 | Phase 3 | Complete |
+| FILT-05 | Phase 3 | Complete |
+| FILT-06 | Phase 3 | Complete |
+| FILT-07 | Phase 3 | Complete |
+| FILT-08 | Phase 3 | Complete |
+| FILT-09 | Phase 3 | Complete |
+| FILT-10 | Phase 3 | Complete |
 | SCOR-01 | Phase 3 | Pending |
 | SCOR-02 | Phase 3 | Pending |
 | CONF-01 | Phase 1 | Complete |
