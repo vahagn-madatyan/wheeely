@@ -17,6 +17,8 @@ from screener.display import (
     fmt_price,
     fmt_ratio,
     render_results_table,
+    render_stage_summary,
+    render_filter_breakdown,
     _score_style,
 )
 
@@ -257,3 +259,181 @@ class TestRenderResultsTable:
         assert "GOOD" in output
         assert "BAD" not in output
         assert "NOSCORE" not in output
+
+
+# ===========================================================================
+# Stage summary panel
+# ===========================================================================
+
+
+class TestRenderStageSummary:
+    """Test render_stage_summary output."""
+
+    def _build_mixed_stocks(self) -> list[ScreenedStock]:
+        """Build ~10 stocks with varied filter outcomes.
+
+        - 2 fail bar_data (no further filters)
+        - 2 fail stage 1 (price_range, avg_volume)
+        - 3 fail stage 2 (market_cap, sector, optionable)
+        - 3 pass all filters with scores
+        """
+        stocks = []
+
+        # 2 fail bar_data
+        for sym in ["NOBAR1", "NOBAR2"]:
+            stocks.append(_make_stock(sym, [FilterResult("bar_data", False, reason="no data")]))
+
+        # 2 fail stage 1 filters (pass bar_data, fail price_range or avg_volume)
+        for sym, fail_filter in [("LOWPRC", "price_range"), ("LOWVOL", "avg_volume")]:
+            results = [FilterResult("bar_data", True)]
+            s1_names = ["price_range", "avg_volume", "rsi", "sma200"]
+            for fn in s1_names:
+                results.append(FilterResult(fn, fn != fail_filter))
+            stocks.append(_make_stock(sym, results))
+
+        # 3 fail stage 2 filters (pass bar_data + stage 1, fail one stage 2)
+        s1_pass = [FilterResult("bar_data", True)]
+        for fn in ["price_range", "avg_volume", "rsi", "sma200"]:
+            s1_pass.append(FilterResult(fn, True))
+
+        for sym, fail_filter in [("SMALLCAP", "market_cap"), ("BADSEC", "sector"), ("NOOPT", "optionable")]:
+            results = list(s1_pass)  # copy
+            s2_names = ["market_cap", "debt_equity", "net_margin", "sales_growth", "sector", "optionable"]
+            for fn in s2_names:
+                results.append(FilterResult(fn, fn != fail_filter))
+            stocks.append(_make_stock(sym, results))
+
+        # 3 pass everything with scores
+        for sym, score in [("GOOD1", 80.0), ("GOOD2", 65.0), ("GOOD3", 50.0)]:
+            stocks.append(_make_stock(sym, _all_pass_filters(), score=score))
+
+        return stocks
+
+    def test_panel_title(self):
+        console = _capture_console()
+        stocks = self._build_mixed_stocks()
+        render_stage_summary(stocks, console=console)
+        output = console.file.getvalue()
+        assert "Filter Summary" in output
+
+    def test_universe_count(self):
+        console = _capture_console()
+        stocks = self._build_mixed_stocks()
+        render_stage_summary(stocks, console=console)
+        output = console.file.getvalue()
+        assert "10" in output  # 10 total stocks
+
+    def test_stage_counts(self):
+        console = _capture_console()
+        stocks = self._build_mixed_stocks()
+        render_stage_summary(stocks, console=console)
+        output = console.file.getvalue()
+        # After bars: 10 - 2 = 8
+        assert "8" in output
+        # Stage 1: 8 - 2 = 6
+        assert "6" in output
+        # Stage 2: 6 - 3 = 3
+        assert "3" in output
+
+    def test_empty_stock_list(self):
+        console = _capture_console()
+        render_stage_summary([], console=console)
+        output = console.file.getvalue()
+        assert "Filter Summary" in output
+        assert "0" in output
+
+    def test_reduction_counts_shown(self):
+        console = _capture_console()
+        stocks = self._build_mixed_stocks()
+        render_stage_summary(stocks, console=console)
+        output = console.file.getvalue()
+        # Reductions should appear as (-N) in output
+        assert "(-2)" in output  # bar_data removes 2
+
+
+# ===========================================================================
+# Filter breakdown table
+# ===========================================================================
+
+
+class TestRenderFilterBreakdown:
+    """Test render_filter_breakdown output."""
+
+    def _build_mixed_stocks(self) -> list[ScreenedStock]:
+        """Same as TestRenderStageSummary."""
+        stocks = []
+
+        for sym in ["NOBAR1", "NOBAR2"]:
+            stocks.append(_make_stock(sym, [FilterResult("bar_data", False, reason="no data")]))
+
+        for sym, fail_filter in [("LOWPRC", "price_range"), ("LOWVOL", "avg_volume")]:
+            results = [FilterResult("bar_data", True)]
+            for fn in ["price_range", "avg_volume", "rsi", "sma200"]:
+                results.append(FilterResult(fn, fn != fail_filter))
+            stocks.append(_make_stock(sym, results))
+
+        s1_pass = [FilterResult("bar_data", True)]
+        for fn in ["price_range", "avg_volume", "rsi", "sma200"]:
+            s1_pass.append(FilterResult(fn, True))
+
+        for sym, fail_filter in [("SMALLCAP", "market_cap"), ("BADSEC", "sector"), ("NOOPT", "optionable")]:
+            results = list(s1_pass)
+            for fn in ["market_cap", "debt_equity", "net_margin", "sales_growth", "sector", "optionable"]:
+                results.append(FilterResult(fn, fn != fail_filter))
+            stocks.append(_make_stock(sym, results))
+
+        for sym, score in [("GOOD1", 80.0), ("GOOD2", 65.0), ("GOOD3", 50.0)]:
+            stocks.append(_make_stock(sym, _all_pass_filters(), score=score))
+
+        return stocks
+
+    def test_breakdown_title(self):
+        console = _capture_console()
+        stocks = self._build_mixed_stocks()
+        render_filter_breakdown(stocks, console=console)
+        output = console.file.getvalue()
+        assert "Filter Breakdown" in output
+
+    def test_active_filters_appear(self):
+        console = _capture_console()
+        stocks = self._build_mixed_stocks()
+        render_filter_breakdown(stocks, console=console)
+        output = console.file.getvalue()
+        # Filters that removed stocks should appear
+        assert "bar_data" in output
+        assert "price_range" in output
+        assert "avg_volume" in output
+        assert "market_cap" in output
+        assert "sector" in output
+        assert "optionable" in output
+
+    def test_inactive_filters_hidden(self):
+        console = _capture_console()
+        stocks = self._build_mixed_stocks()
+        render_filter_breakdown(stocks, console=console)
+        output = console.file.getvalue()
+        # Filters that removed 0 stocks should NOT appear
+        assert "debt_equity" not in output
+        assert "net_margin" not in output
+        assert "sales_growth" not in output
+        # rsi and sma200 removed 0 stocks too
+        assert "sma200" not in output
+
+    def test_remaining_is_waterfall(self):
+        console = _capture_console()
+        stocks = self._build_mixed_stocks()
+        render_filter_breakdown(stocks, console=console)
+        output = console.file.getvalue()
+        # bar_data removes 2 -> remaining 8
+        assert "8" in output
+        # After all removals, final remaining should be 3
+        assert "3" in output
+
+    def test_all_passing_minimal_output(self):
+        console = _capture_console()
+        stocks = [_make_stock("A", _all_pass_filters(), score=90.0)]
+        render_filter_breakdown(stocks, console=console)
+        output = console.file.getvalue()
+        assert "Filter Breakdown" in output
+        # No filter names should appear since nothing was removed
+        assert "bar_data" not in output
