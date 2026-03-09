@@ -986,3 +986,163 @@ class TestRunPipeline:
 
         symbols = {s.symbol for s in result}
         assert "EXTRA" in symbols
+
+
+# ===========================================================================
+# TestRunPipelineProgress
+# ===========================================================================
+
+class TestRunPipelineProgress:
+    """run_pipeline: on_progress callback integration."""
+
+    def _setup_mocks(self):
+        """Create common mocks for pipeline progress tests.
+
+        Returns (trade_client, stock_client, finnhub_client, config).
+        2 symbols: PASS (passes all), NOBAR (no bar data).
+        """
+        asset_pass = MagicMock()
+        asset_pass.symbol = "PASS"
+        asset_pass.tradable = True
+
+        asset_nobar = MagicMock()
+        asset_nobar.symbol = "NOBAR"
+        asset_nobar.tradable = True
+
+        opt_pass = MagicMock()
+        opt_pass.symbol = "PASS"
+
+        opt_nobar = MagicMock()
+        opt_nobar.symbol = "NOBAR"
+
+        trade_client = MagicMock()
+        trade_client.get_all_assets.side_effect = [
+            [asset_pass, asset_nobar],
+            [opt_pass, opt_nobar],
+        ]
+
+        stock_client = MagicMock()
+
+        finnhub_client = MagicMock()
+        finnhub_client.company_profile.return_value = {
+            "marketCapitalization": 5000,
+            "finnhubIndustry": "Technology",
+        }
+        finnhub_client.company_metrics.return_value = {
+            "metric": {
+                "totalDebtToEquity": 0.5,
+                "netProfitMarginTTM": 15.0,
+                "revenueGrowthQuarterlyYoy": 10.0,
+            }
+        }
+
+        config = ScreenerConfig.model_validate({
+            "sectors": {"include": [], "exclude": []},
+        })
+
+        return trade_client, stock_client, finnhub_client, config
+
+    def _make_bars_dict(self):
+        """Create mock bar data: PASS has valid data, NOBAR absent."""
+        np.random.seed(42)
+        pass_prices = 25 + np.cumsum(np.random.normal(0, 0.1, 250))
+        pass_df = pd.DataFrame({
+            "close": pass_prices,
+            "volume": [3_000_000] * 250,
+        })
+        return {"PASS": pass_df}
+
+    def _make_indicators(self, bars_df):
+        close = bars_df["close"]
+        price = float(close.iloc[-1])
+        volume = float(bars_df["volume"].mean())
+        return {
+            "price": price,
+            "avg_volume": volume,
+            "rsi_14": 45.0,
+            "sma_200": price - 1.0,
+            "above_sma200": True,
+        }
+
+    @patch("screener.pipeline.fetch_daily_bars")
+    @patch("screener.pipeline.compute_indicators")
+    @patch("screener.pipeline.compute_historical_volatility")
+    def test_pipeline_calls_on_progress(self, mock_hv, mock_indicators, mock_bars):
+        from screener.pipeline import run_pipeline
+
+        trade_client, stock_client, finnhub_client, config = self._setup_mocks()
+        bars = self._make_bars_dict()
+        mock_bars.return_value = bars
+        mock_indicators.side_effect = lambda df: self._make_indicators(df)
+        mock_hv.return_value = 0.35
+
+        mock_progress = MagicMock()
+
+        result = run_pipeline(
+            trade_client, stock_client, finnhub_client, config,
+            symbol_list_path="/nonexistent/path.txt",
+            on_progress=mock_progress,
+        )
+
+        # Verify callback was called
+        assert mock_progress.call_count > 0
+
+        # Extract stage names from all calls
+        stage_names = {call.args[0] for call in mock_progress.call_args_list}
+
+        # Must include these stage names
+        assert "Fetching Alpaca bars" in stage_names
+        assert "Filtering Stage 1" in stage_names
+        assert "Scoring" in stage_names
+        # Fetching Finnhub data should appear for PASS (which passes stage 1)
+        assert "Fetching Finnhub data" in stage_names
+
+    @patch("screener.pipeline.fetch_daily_bars")
+    @patch("screener.pipeline.compute_indicators")
+    @patch("screener.pipeline.compute_historical_volatility")
+    def test_pipeline_finnhub_progress_includes_symbol(self, mock_hv, mock_indicators, mock_bars):
+        from screener.pipeline import run_pipeline
+
+        trade_client, stock_client, finnhub_client, config = self._setup_mocks()
+        bars = self._make_bars_dict()
+        mock_bars.return_value = bars
+        mock_indicators.side_effect = lambda df: self._make_indicators(df)
+        mock_hv.return_value = 0.35
+
+        mock_progress = MagicMock()
+
+        run_pipeline(
+            trade_client, stock_client, finnhub_client, config,
+            symbol_list_path="/nonexistent/path.txt",
+            on_progress=mock_progress,
+        )
+
+        # Find Finnhub stage calls and check symbol kwarg
+        finnhub_calls = [
+            call for call in mock_progress.call_args_list
+            if call.args[0] == "Fetching Finnhub data"
+        ]
+        assert len(finnhub_calls) > 0
+        # At least one should have symbol keyword
+        symbols_passed = [call.kwargs.get("symbol") for call in finnhub_calls]
+        assert any(s is not None for s in symbols_passed)
+
+    @patch("screener.pipeline.fetch_daily_bars")
+    @patch("screener.pipeline.compute_indicators")
+    @patch("screener.pipeline.compute_historical_volatility")
+    def test_pipeline_no_progress_callback(self, mock_hv, mock_indicators, mock_bars):
+        from screener.pipeline import run_pipeline
+
+        trade_client, stock_client, finnhub_client, config = self._setup_mocks()
+        bars = self._make_bars_dict()
+        mock_bars.return_value = bars
+        mock_indicators.side_effect = lambda df: self._make_indicators(df)
+        mock_hv.return_value = 0.35
+
+        # Run without on_progress -- should not error (backward compatibility)
+        result = run_pipeline(
+            trade_client, stock_client, finnhub_client, config,
+            symbol_list_path="/nonexistent/path.txt",
+        )
+
+        assert len(result) == 2  # PASS + NOBAR

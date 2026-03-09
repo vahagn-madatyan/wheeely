@@ -437,3 +437,51 @@ class TestRenderFilterBreakdown:
         assert "Filter Breakdown" in output
         # No filter names should appear since nothing was removed
         assert "bar_data" not in output
+
+
+# ===========================================================================
+# Progress callback
+# ===========================================================================
+
+
+class TestProgressCallback:
+    """Test progress_context callback factory."""
+
+    def test_progress_context_yields_callable(self):
+        from screener.display import progress_context
+
+        console = Console(file=StringIO(), width=120)
+        with progress_context(console=console) as callback:
+            assert callable(callback)
+
+    def test_callback_creates_and_updates_tasks(self):
+        from screener.display import progress_context
+
+        console = Console(file=StringIO(), width=120)
+        with progress_context(console=console) as callback:
+            callback("Fetching Alpaca bars", 1, 10)
+            callback("Fetching Alpaca bars", 5, 10)
+            callback("Fetching Alpaca bars", 10, 10)
+        # No exceptions means success
+
+    def test_callback_with_symbol(self):
+        from screener.display import progress_context
+
+        console = Console(file=StringIO(), width=120)
+        with progress_context(console=console) as callback:
+            callback("Fetching Finnhub data", 1, 5, symbol="AAPL")
+            callback("Fetching Finnhub data", 2, 5, symbol="MSFT")
+        # No exceptions means success
+
+    def test_callback_multiple_stages(self):
+        from screener.display import progress_context
+
+        console = Console(file=StringIO(), width=120)
+        with progress_context(console=console) as callback:
+            callback("Fetching Alpaca bars", 100, 100)
+            callback("Filtering Stage 1", 1, 100)
+            callback("Filtering Stage 1", 50, 100)
+            callback("Filtering Stage 1", 100, 100)
+            callback("Fetching Finnhub data", 1, 50, symbol="AAPL")
+            callback("Scoring", 50, 50)
+        # No exceptions means success
