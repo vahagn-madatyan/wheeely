@@ -20,6 +20,7 @@ dependencies = [
     "requests>=2.28",
     "alpaca-py",
     "finnhub-python",
+    "rich>=14.0",
 ]
 
 [project.scripts]
