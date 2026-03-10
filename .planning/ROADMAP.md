@@ -90,11 +90,11 @@ Plans:
   3. User can pass `--update-symbols` to write screened symbols to config/symbol_list.txt
   4. Running with `--output-only` (the default) displays results without modifying any files
   5. Symbols with active positions (short puts, assigned shares, short calls) are never removed from symbol_list.txt during export
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 05-01: TBD
-- [ ] 05-02: TBD
+- [ ] 05-01-PLAN.md -- Typer install, shared CLI helpers (cli_common.py), position-safe symbol export (export.py) with tests
+- [ ] 05-02-PLAN.md -- Standalone run-screener CLI, run-strategy Typer migration with --screen flag, cli_args.py deletion
 
 ## Progress
 
