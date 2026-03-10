@@ -90,11 +90,12 @@ Plans:
   3. User can pass `--update-symbols` to write screened symbols to config/symbol_list.txt
   4. Running with `--output-only` (the default) displays results without modifying any files
   5. Symbols with active positions (short puts, assigned shares, short calls) are never removed from symbol_list.txt during export
-**Plans**: 2 plans
+**Plans**: 3 plans
 
 Plans:
-- [ ] 05-01-PLAN.md -- Typer install, shared CLI helpers (cli_common.py), position-safe symbol export (export.py) with tests
-- [ ] 05-02-PLAN.md -- Standalone run-screener CLI, run-strategy Typer migration with --screen flag, cli_args.py deletion
+- [x] 05-01-PLAN.md -- Typer install, shared CLI helpers (cli_common.py), position-safe symbol export (export.py) with tests
+- [x] 05-02-PLAN.md -- Standalone run-screener CLI, run-strategy Typer migration with --screen flag, cli_args.py deletion
+- [ ] 05-03-PLAN.md -- Gap closure: Add progress callbacks to fetch_universe and fetch_daily_bars (UAT fix)
 
 ## Progress
 
@@ -107,4 +108,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | 2. Data Sources | 1/2 | In Progress|  |
 | 3. Screening Pipeline | 0/2 | Not started | - |
 | 4. Output and Display | 0/2 | Not started | - |
-| 5. CLI and Integration | 0/2 | Not started | - |
+| 5. CLI and Integration | 2/3 | Gap closure | - |
