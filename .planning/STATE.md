@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 05-02-PLAN.md
-last_updated: "2026-03-10T16:01:18.876Z"
-last_activity: 2026-03-10 -- Completed Plan 05-02 (CLI Entry Points)
+stopped_at: Completed 05-03-PLAN.md
+last_updated: "2026-03-10T23:13:04Z"
+last_activity: 2026-03-10 -- Completed Plan 05-03 (Progress Callback Fix)
 progress:
   total_phases: 5
   completed_phases: 5
-  total_plans: 10
-  completed_plans: 10
+  total_plans: 11
+  completed_plans: 11
   percent: 100
 ---
 
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-03-07)
 ## Current Position
 
 Phase: 5 of 5 (CLI and Integration)
-Plan: 2 of 2 in current phase
+Plan: 3 of 3 in current phase
 Status: Complete
-Last activity: 2026-03-10 -- Completed Plan 05-02 (CLI Entry Points)
+Last activity: 2026-03-10 -- Completed Plan 05-03 (Progress Callback Fix)
 
 Progress: [██████████] 100%
 
@@ -59,6 +59,7 @@ Progress: [██████████] 100%
 | Phase 04 P02 | 3 min | 1 tasks | 4 files |
 | Phase 05 P01 | 3 min | 2 tasks | 4 files |
 | Phase 05 P02 | 4 min | 2 tasks | 6 files |
+| Phase 05 P03 | 3 min | 1 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -88,6 +89,8 @@ Recent decisions affecting current work:
 - [Phase 05]: Module-level imports in CLI entry points for patchability with unittest.mock.patch
 - [Phase 05]: Default run-screener is output-only (no --output-only flag needed, CLI-04)
 - [Phase 05]: BrokerClient created once before --screen block, shared for screen + strategy
+- Plan 05-03: Replaced post-hoc progress with per-batch on_progress callbacks passed from pipeline into fetch_daily_bars
+- Plan 05-03: Universe fetch uses two _progress calls (0/2 before, 2/2 after) for immediate visual feedback
 
 ### Pending Todos
 
@@ -101,6 +104,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-10T15:56:17.000Z
-Stopped at: Completed 05-02-PLAN.md
+Last session: 2026-03-10T23:13:04Z
+Stopped at: Completed 05-03-PLAN.md
 Resume file: None
