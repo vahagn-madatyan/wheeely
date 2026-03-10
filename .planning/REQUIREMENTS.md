@@ -39,10 +39,10 @@
 
 ### CLI Integration
 
-- [ ] **CLI-01**: User can run screener standalone via `run-screener` CLI command
-- [ ] **CLI-02**: User can run screener before strategy via `run-strategy --screen` flag
+- [x] **CLI-01**: User can run screener standalone via `run-screener` CLI command
+- [x] **CLI-02**: User can run screener before strategy via `run-strategy --screen` flag
 - [x] **CLI-03**: Screener CLI accepts --update-symbols flag to write results to symbol_list.txt
-- [ ] **CLI-04**: Screener CLI accepts --output-only flag (default) to display results without updating files
+- [x] **CLI-04**: Screener CLI accepts --output-only flag (default) to display results without updating files
 
 ### Data & Safety
 
@@ -103,10 +103,10 @@
 | OUTP-02 | Phase 4 | Complete |
 | OUTP-03 | Phase 5 | Complete |
 | OUTP-04 | Phase 4 | Complete |
-| CLI-01 | Phase 5 | Pending |
-| CLI-02 | Phase 5 | Pending |
+| CLI-01 | Phase 5 | Complete |
+| CLI-02 | Phase 5 | Complete |
 | CLI-03 | Phase 5 | Complete |
-| CLI-04 | Phase 5 | Pending |
+| CLI-04 | Phase 5 | Complete |
 | SAFE-01 | Phase 1 | Complete |
 | SAFE-02 | Phase 2 | Complete |
 | SAFE-03 | Phase 5 | Complete |

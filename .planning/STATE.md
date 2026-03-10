@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Completed 05-01-PLAN.md
-last_updated: "2026-03-10T15:51:07.219Z"
-last_activity: 2026-03-10 -- Completed Plan 05-01 (Symbol Export and CLI Helpers)
+status: complete
+stopped_at: Completed 05-02-PLAN.md
+last_updated: "2026-03-10T15:56:17.000Z"
+last_activity: 2026-03-10 -- Completed Plan 05-02 (CLI Entry Points)
 progress:
   total_phases: 5
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 10
-  completed_plans: 9
-  percent: 90
+  completed_plans: 10
+  percent: 100
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-07)
 ## Current Position
 
 Phase: 5 of 5 (CLI and Integration)
-Plan: 1 of 2 in current phase
-Status: Executing
-Last activity: 2026-03-10 -- Completed Plan 05-01 (Symbol Export and CLI Helpers)
+Plan: 2 of 2 in current phase
+Status: Complete
+Last activity: 2026-03-10 -- Completed Plan 05-02 (CLI Entry Points)
 
-Progress: [█████████░] 90%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -58,6 +58,7 @@ Progress: [█████████░] 90%
 | Phase 04 P01 | 3 min | 2 tasks | 3 files |
 | Phase 04 P02 | 3 min | 1 tasks | 4 files |
 | Phase 05 P01 | 3 min | 2 tasks | 4 files |
+| Phase 05 P02 | 4 min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -84,6 +85,9 @@ Recent decisions affecting current work:
 - [Phase 04]: _progress helper inside run_pipeline guards callback calls -- zero overhead when on_progress=None
 - [Phase 05]: get_protected_symbols accepts update_state_fn as parameter (not import) for testability
 - [Phase 05]: export_symbols accepts Console parameter following established Phase 4 injection pattern
+- [Phase 05]: Module-level imports in CLI entry points for patchability with unittest.mock.patch
+- [Phase 05]: Default run-screener is output-only (no --output-only flag needed, CLI-04)
+- [Phase 05]: BrokerClient created once before --screen block, shared for screen + strategy
 
 ### Pending Todos
 
@@ -97,6 +101,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-10T15:51:07.217Z
-Stopped at: Completed 05-01-PLAN.md
+Last session: 2026-03-10T15:56:17.000Z
+Stopped at: Completed 05-02-PLAN.md
 Resume file: None
