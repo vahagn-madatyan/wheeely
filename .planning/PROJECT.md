@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A stock screening module for the existing Wheeely options wheel strategy bot. It screens stocks using Finnhub fundamental data (market cap, debt/equity, margins, sales growth) and Alpaca real-time market data (price, volume, RSI, SMA200, options availability), outputting results as a rich table for review and optionally updating the bot's symbol list. Users configure screening criteria via a YAML config file with preset profiles (conservative, moderate, aggressive) and custom overrides.
+A stock screening module for the Wheeely options wheel strategy bot. Screens stocks using Finnhub fundamental data (market cap, debt/equity, margins, sales growth) and Alpaca market data (price, volume, RSI, SMA200, options availability), then scores and ranks candidates for wheel suitability. Results display as a Rich table with color-coded scores, filter elimination summaries, and progress indicators. Users configure screening via YAML presets (conservative/moderate/aggressive) with custom overrides. Integrates as standalone `run-screener` CLI and `run-strategy --screen` flag.
 
 ## Core Value
 
@@ -13,63 +13,58 @@ Automatically identify wheel-strategy-suitable stocks by combining fundamental h
 ### Validated
 
 - ✓ Alpaca API integration for trading, stock data, and option data — existing
-- ✓ CLI entry point pattern with argparse — existing
+- ✓ CLI entry point pattern with Typer — v1.0
 - ✓ Symbol list management via config/symbol_list.txt — existing
 - ✓ BrokerClient facade over Alpaca SDK clients — existing
 - ✓ Strategy parameter configuration via config/params.py — existing
 - ✓ Environment-based credential management via .env — existing
+- ✓ YAML-based screening config with preset profiles and custom overrides — v1.0 (CONF-01..04)
+- ✓ Finnhub API integration with rate limiting and fallback chains — v1.0 (SAFE-01, SAFE-02, SAFE-04)
+- ✓ Alpaca market data for technical screening (RSI, SMA200, volume) — v1.0 (FILT-05..08)
+- ✓ 10 screening filters with cheap-first pipeline ordering — v1.0 (FILT-01..10)
+- ✓ Wheel suitability scoring with 3 weighted components — v1.0 (SCOR-01, SCOR-02)
+- ✓ Rich table output with color-coded scores and filter summaries — v1.0 (OUTP-01, OUTP-02)
+- ✓ Progress indicators during rate-limited API calls — v1.0 (OUTP-04)
+- ✓ Position-safe symbol list export — v1.0 (OUTP-03, SAFE-03)
+- ✓ Standalone `run-screener` CLI and `run-strategy --screen` integration — v1.0 (CLI-01..04)
+- ✓ Human-readable config validation errors (Rich Panels) — v1.0 (Phase 6)
+- ✓ Complete pyproject.toml dependency declarations — v1.0 (Phase 6)
 
 ### Active
 
-- [ ] YAML-based screening config with preset profiles and custom overrides
-- [ ] Finnhub API integration for fundamental screening (market cap, debt/equity, net margin, sales growth)
-- [ ] Alpaca market data integration for technical screening (price range, average volume, RSI, SMA200)
-- [ ] Alpaca options data integration for options availability check
-- [ ] Rich table output showing screening results with scores
-- [ ] Symbol list export (write filtered symbols to config/symbol_list.txt)
-- [ ] Standalone `run-screener` CLI command
-- [ ] `run-strategy --screen` flag to run screening before strategy execution
-- [ ] Finnhub API key support in .env file (FINNHUB_API_KEY)
+(None — next milestone requirements TBD via `/gsd:new-milestone`)
 
 ### Out of Scope
 
-- Real-time streaming screener (WebSocket-based continuous monitoring) — future enhancement
-- Web UI for screening results — CLI-only for now
-- Backtesting screener results against historical performance — separate feature
-- Finviz scraping — using Finnhub API instead for fundamental data
-- Custom indicator development (MACD, Bollinger, etc.) — start with RSI and SMA200 only
+- Real-time streaming screener (WebSocket-based continuous monitoring) — batch screening sufficient for wheel strategy
+- Web UI for screening results — CLI-only tool
+- Backtesting screener results against historical performance — separate domain
+- Finviz scraping — using Finnhub API instead for reliable fundamental data
+- Custom indicator development (MACD, Bollinger, etc.) — RSI and SMA200 sufficient for v1.0
+- AI/ML screening — rule-based filters are transparent and debuggable
+- Multi-broker support — only Alpaca is used
 
 ## Context
 
-The existing Wheeely bot trades a hardcoded list of symbols from `config/symbol_list.txt`. This screener adds data-driven symbol discovery. The Finviz screener URL provided as reference uses these filters:
-- Market Cap: Mid and over
-- Debt/Equity: Under 1
-- Net Margin: Positive
-- Sales Q/Q: Over 5%
-- Average Volume: Over 2M
-- Optionable: Yes
-- Price: $10-$50
-- RSI(14): Not overbought (<60)
-- Price above SMA200
+Shipped v1.0 with 5,843 LOC Python across 6 phases (12 plans).
+Tech stack: Python 3.13, alpaca-py, finnhub-python, ta, pydantic, rich, typer, pyyaml.
+193 tests passing, zero failures. 28/28 requirements satisfied.
 
-These map to two data sources: Finnhub (fundamentals) and Alpaca (technical/options). The screener will combine both, applying filters from the YAML config to produce a scored list of candidates.
-
-## Constraints
-
-- **Data Source**: Finnhub free tier has 60 calls/min rate limit — screener must respect this
-- **Data Source**: Alpaca market data requires existing API keys; real-time data availability depends on subscription tier
-- **Tech Stack**: Must integrate with existing Python/alpaca-py codebase; use `uv` for dependency management
-- **Config Format**: YAML for screening config (not Python constants like existing params.py)
-- **No Database**: Consistent with existing pattern — no persistent local storage
+The screener combines Finnhub fundamentals and Alpaca technical data through a 3-stage pipeline (cheap Alpaca filters first, expensive Finnhub filters second, scoring third) to minimize API calls while respecting Finnhub's 60 calls/min rate limit.
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Finnhub for fundamentals | Alpaca doesn't provide fundamental data; Finnhub has free tier with market cap, financials, ratios | — Pending |
-| YAML config with presets | More user-friendly than raw Python constants; presets lower barrier to entry | — Pending |
-| Dual CLI integration | Standalone `run-screener` + `run-strategy --screen` serves both exploration and automation | — Pending |
-| Finnhub API key in .env | Consistent with existing Alpaca credential pattern | — Pending |
+| Finnhub for fundamentals | Alpaca doesn't provide fundamental data; Finnhub free tier covers market cap, financials, ratios | ✓ Good — reliable data, rate limiting works well |
+| YAML config with presets | More user-friendly than raw Python constants; presets lower barrier to entry | ✓ Good — 3 presets ship with sensible defaults |
+| Dual CLI integration | Standalone `run-screener` + `run-strategy --screen` serves both exploration and automation | ✓ Good — both paths work end-to-end |
+| Finnhub API key in .env | Consistent with existing Alpaca credential pattern | ✓ Good |
+| Cheap-first pipeline ordering | Alpaca filters (free, fast) before Finnhub filters (rate-limited) | ✓ Good — minimizes API calls |
+| Pydantic v2 for config validation | Type safety + clear error messages via format_validation_errors | ✓ Good — Rich Panel UX for errors |
+| Typer for CLI | Replaces argparse; flag definitions cleaner, built-in help | ✓ Good — both CLIs migrated |
+| Position-safe export | Union of screened + protected symbols prevents removing active wheel positions | ✓ Good — critical safety feature |
+| TDD for filter/scoring code | Red-green cycle ensures correctness of scoring math and filter logic | ✓ Good — 60 filter tests, 9 scoring tests |
 
 ---
-*Last updated: 2026-03-07 after initialization*
+*Last updated: 2026-03-11 after v1.0 milestone*
