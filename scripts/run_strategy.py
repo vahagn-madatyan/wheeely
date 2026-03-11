@@ -14,6 +14,9 @@ from pathlib import Path
 from typing import Annotated
 
 import typer
+from pydantic import ValidationError
+from rich.console import Console
+from rich.panel import Panel
 
 from config.credentials import ALPACA_API_KEY, ALPACA_SECRET_KEY, IS_PAPER
 from config.credentials import require_finnhub_key
@@ -23,7 +26,7 @@ from core.execution import sell_puts, sell_calls
 from core.state_manager import update_state, calculate_risk
 from logging.logger_setup import setup_logger
 from logging.strategy_logger import StrategyLogger
-from screener.config_loader import load_config
+from screener.config_loader import format_validation_errors, load_config
 from screener.display import (
     progress_context,
     render_results_table,
@@ -83,7 +86,23 @@ def run(
 
     # --screen: run screener before strategy, auto-update symbol list
     if screen:
-        cfg = load_config()
+        try:
+            cfg = load_config()
+        except ValidationError as e:
+            console = Console(stderr=True)
+            error_text = format_validation_errors(e)
+            panel = Panel(
+                error_text,
+                title="Configuration Error",
+                border_style="red",
+                expand=False,
+            )
+            console.print(panel)
+            console.print(
+                "[dim]See config/presets/ for valid examples "
+                "or run-screener --preset conservative[/dim]"
+            )
+            raise typer.Exit(code=1)
         finnhub_key = require_finnhub_key()
         finnhub = FinnhubClient(api_key=finnhub_key)
 

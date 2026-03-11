@@ -15,6 +15,9 @@ from typing import Annotated
 
 import typer
 import yaml
+from pydantic import ValidationError
+from rich.console import Console
+from rich.panel import Panel
 
 from config.credentials import require_finnhub_key
 from core.cli_common import create_broker_client, require_alpaca_credentials
@@ -22,6 +25,7 @@ from core.state_manager import update_state
 from screener.config_loader import (
     ScreenerConfig,
     deep_merge,
+    format_validation_errors,
     load_config,
     load_preset,
 )
@@ -73,19 +77,35 @@ def run(
         require_alpaca_credentials()
 
     # Load screener config with optional preset override
-    if preset is not None:
-        preset_data = load_preset(preset.value)
-        config_path = Path(config)
-        if config_path.exists():
-            with open(config_path) as f:
-                user_config = yaml.safe_load(f) or {}
+    try:
+        if preset is not None:
+            preset_data = load_preset(preset.value)
+            config_path = Path(config)
+            if config_path.exists():
+                with open(config_path) as f:
+                    user_config = yaml.safe_load(f) or {}
+            else:
+                user_config = {}
+            user_config["preset"] = preset.value
+            merged = deep_merge(preset_data, user_config)
+            cfg = ScreenerConfig.model_validate(merged)
         else:
-            user_config = {}
-        user_config["preset"] = preset.value
-        merged = deep_merge(preset_data, user_config)
-        cfg = ScreenerConfig.model_validate(merged)
-    else:
-        cfg = load_config(config)
+            cfg = load_config(config)
+    except ValidationError as e:
+        console = Console(stderr=True)
+        error_text = format_validation_errors(e)
+        panel = Panel(
+            error_text,
+            title="Configuration Error",
+            border_style="red",
+            expand=False,
+        )
+        console.print(panel)
+        console.print(
+            "[dim]See config/presets/ for valid examples "
+            "or run-screener --preset conservative[/dim]"
+        )
+        raise typer.Exit(code=1)
 
     # Create Finnhub client
     finnhub_key = require_finnhub_key()
