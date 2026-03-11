@@ -108,10 +108,10 @@ Plans:
   2. Invalid screener.yaml values produce human-readable error messages (not raw Pydantic tracebacks) in both `run-screener` and `run-strategy --screen`
   3. `pytest tests/test_credentials.py` passes regardless of whether `.env` contains real API keys
   4. Stale deferred-items.md is cleaned up or removed
-**Plans**: 0 plans
+**Plans**: 1 plan
 
 Plans:
-- (none yet)
+- [ ] 06-01-PLAN.md -- Add missing deps (ta, pyyaml, pydantic), fix test isolation, wire config error Rich Panels into CLI, delete stale artifact
 
 ## Progress
 
@@ -125,4 +125,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | 3. Screening Pipeline | 0/2 | Not started | - |
 | 4. Output and Display | 0/2 | Not started | - |
 | 5. CLI and Integration | 3/3 | Complete | 2026-03-10 |
-| 6. Packaging & Tech Debt Cleanup | 0/0 | Not started | - |
+| 6. Packaging & Tech Debt Cleanup | 0/1 | Not started | - |
