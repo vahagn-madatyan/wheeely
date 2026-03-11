@@ -9,6 +9,7 @@ import pytest
 def test_finnhub_key_loaded(monkeypatch):
     """When FINNHUB_API_KEY is set in environment, the module-level variable holds the value."""
     monkeypatch.setenv("FINNHUB_API_KEY", "test-key-abc123")
+    monkeypatch.setattr("dotenv.load_dotenv", lambda *a, **kw: None)
     import config.credentials as creds
 
     importlib.reload(creds)
@@ -18,6 +19,7 @@ def test_finnhub_key_loaded(monkeypatch):
 def test_finnhub_key_missing_is_none(monkeypatch):
     """When FINNHUB_API_KEY is not in environment, the module-level variable is None."""
     monkeypatch.delenv("FINNHUB_API_KEY", raising=False)
+    monkeypatch.setattr("dotenv.load_dotenv", lambda *a, **kw: None)
     import config.credentials as creds
 
     importlib.reload(creds)
