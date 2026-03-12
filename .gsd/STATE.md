@@ -15,4 +15,4 @@
 - None
 
 ## Next Action
-Execute T02 in slice S07 (next task after T01 merge baseline).
+Execute T02: Fix None-handling in Stage 2 filters and update tests in slice S07.
