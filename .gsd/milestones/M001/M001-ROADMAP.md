@@ -80,7 +80,7 @@ This milestone is complete only when all are true:
 - [x] **S08: HV Rank + Earnings Calendar** `risk:medium` `depends:[S07]`
   > After this: User runs `run-screener` and sees an HV Percentile column (0–100) in the results table. Stocks with earnings within the configured threshold are excluded. Both filters run before options chain API calls (cheap-first ordering preserved).
 
-- [ ] **S09: Options Chain Validation** `risk:medium` `depends:[S08]`
+- [x] **S09: Options Chain Validation** `risk:medium` `depends:[S08]`
   > After this: User runs `run-screener` and only sees stocks with liquid, tradeable options — low OI and wide spread stocks are eliminated. An annualized put premium yield column appears in the results table.
 
 - [ ] **S10: Covered Call Screening + Strategy Integration** `risk:medium` `depends:[S09]`

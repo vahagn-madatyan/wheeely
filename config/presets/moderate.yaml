@@ -15,6 +15,8 @@ earnings:
   earnings_exclusion_days: 14
 options:
   optionable: true
+  options_oi_min: 100
+  options_spread_max: 0.10
 sectors:
   include: []
   exclude:

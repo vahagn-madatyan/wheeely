@@ -45,6 +45,16 @@ class ScreenedStock:
     # Options data (Phase 3)
     is_optionable: Optional[bool] = None
 
+    # Options chain data (Phase 3 — S09)
+    options_oi: Optional[int] = None
+    options_spread: Optional[float] = None
+    put_premium_yield: Optional[float] = None
+    best_put_symbol: Optional[str] = None
+    best_put_strike: Optional[float] = None
+    best_put_dte: Optional[int] = None
+    best_put_bid: Optional[float] = None
+    best_put_ask: Optional[float] = None
+
     # Scoring (Phase 3)
     score: Optional[float] = None
 

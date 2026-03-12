@@ -74,51 +74,6 @@ Aggressive preset uses looser thresholds (small-cap OK, wider delta range, lower
 
 Each preset includes default sector avoid/prefer lists (conservative favors stable sectors, aggressive excludes nothing)
 
-### OPTS-01 — User can filter stocks by options chain OI (minimum open interest on nearest ATM put)
-
-- Status: active
-- Class: core-capability
-- Source: inferred
-- Primary Slice: S09
-
-User can filter stocks by options chain OI (minimum open interest on nearest ATM put)
-
-### OPTS-02 — User can filter stocks by bid/ask spread (maximum spread on nearest ATM put)
-
-- Status: active
-- Class: core-capability
-- Source: inferred
-- Primary Slice: S09
-
-User can filter stocks by bid/ask spread (maximum spread on nearest ATM put)
-
-### OPTS-03 — OI and spread thresholds are configurable per preset
-
-- Status: active
-- Class: core-capability
-- Source: inferred
-- Primary Slice: S09
-
-OI and spread thresholds are configurable per preset
-
-### OPTS-04 — Options chain validation runs only on stocks that pass all prior filter stages
-
-- Status: active
-- Class: core-capability
-- Source: inferred
-- Primary Slice: S09
-
-Options chain validation runs only on stocks that pass all prior filter stages
-
-### OPTS-05 — Best put premium (annualized yield) is displayed in screener results table for each passing stock
-
-- Status: active
-- Class: core-capability
-- Source: inferred
-- Primary Slice: S09
-
-Best put premium (annualized yield) is displayed in screener results table for each passing stock
-
 ### CALL-01 — User can run `run-call-screener` standalone CLI to screen covered call opportunities
 
 - Status: active
@@ -223,6 +178,56 @@ Call screener displays Rich table with symbol, cost basis, recommended strike, D
 - Source: inferred
 - Primary Slice: S08
 - Proof: 3 preset YAML tests + 1 differentiation test in test_hv_earnings.py
+
+### OPTS-01 — User can filter stocks by options chain OI (minimum open interest on nearest ATM put)
+
+- Status: validated
+- Class: core-capability
+- Source: inferred
+- Primary Slice: S09
+- Proof: 7 filter_options_oi tests + run_stage_3_options integration tests in test_options_chain.py
+
+User can filter stocks by options chain OI (minimum open interest on nearest ATM put)
+
+### OPTS-02 — User can filter stocks by bid/ask spread (maximum spread on nearest ATM put)
+
+- Status: validated
+- Class: core-capability
+- Source: inferred
+- Primary Slice: S09
+- Proof: 6 filter_options_spread tests + run_stage_3_options integration tests in test_options_chain.py
+
+User can filter stocks by bid/ask spread (maximum spread on nearest ATM put)
+
+### OPTS-03 — OI and spread thresholds are configurable per preset
+
+- Status: validated
+- Class: core-capability
+- Source: inferred
+- Primary Slice: S09
+- Proof: 5 preset threshold tests (3 per-preset + 1 differentiation + 1 strictness ordering) in test_options_chain.py
+
+OI and spread thresholds are configurable per preset
+
+### OPTS-04 — Options chain validation runs only on stocks that pass all prior filter stages
+
+- Status: validated
+- Class: core-capability
+- Source: inferred
+- Primary Slice: S09
+- Proof: test_stage3_only_for_stage2_passers in test_options_chain.py — FAIL stock has no options_oi/options_spread filter results
+
+Options chain validation runs only on stocks that pass all prior filter stages
+
+### OPTS-05 — Best put premium (annualized yield) is displayed in screener results table for each passing stock
+
+- Status: validated
+- Class: core-capability
+- Source: inferred
+- Primary Slice: S09
+- Proof: test_yield_column_in_results_table + 8 compute_put_premium_yield math tests in test_options_chain.py
+
+Best put premium (annualized yield) is displayed in screener results table for each passing stock
 
 ## Deferred
 

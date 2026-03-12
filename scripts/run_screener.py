@@ -122,6 +122,7 @@ def run(
             finnhub,
             cfg,
             on_progress=on_progress,
+            option_client=broker.option_client,
         )
 
     # Display results

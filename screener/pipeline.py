@@ -12,14 +12,15 @@ Stage 3: score survivors and sort.
 """
 
 import logging as stdlib_logging
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Callable
 
 import numpy as np
 import pandas as pd
-from alpaca.trading.enums import AssetClass, AssetStatus
-from alpaca.trading.requests import GetAssetsRequest
+from alpaca.data.requests import OptionSnapshotRequest
+from alpaca.trading.enums import AssetClass, AssetStatus, ContractType
+from alpaca.trading.requests import GetAssetsRequest, GetOptionContractsRequest
 
 from models.screened_stock import FilterResult, ScreenedStock
 from screener.config_loader import ScreenerConfig
@@ -672,6 +673,225 @@ def filter_earnings_proximity(
 
 
 # ---------------------------------------------------------------------------
+# Options chain filters
+# ---------------------------------------------------------------------------
+
+# DTE range for options chain lookup (not user-configurable; wide enough
+# to find tradeable contracts for screening purposes).
+_OPTIONS_DTE_MIN = 14
+_OPTIONS_DTE_MAX = 60
+
+
+def filter_options_oi(stock: ScreenedStock, config: ScreenerConfig) -> FilterResult:
+    """Check if nearest ATM put has sufficient open interest.
+
+    Args:
+        stock: ScreenedStock with options_oi field populated.
+        config: ScreenerConfig with options.options_oi_min.
+
+    Returns:
+        FilterResult with pass/fail and reason.
+    """
+    min_oi = config.options.options_oi_min
+
+    if stock.options_oi is None:
+        return FilterResult(
+            filter_name="options_oi",
+            passed=False,
+            actual_value=None,
+            threshold=float(min_oi),
+            reason="Open interest data unavailable",
+        )
+
+    if stock.options_oi < min_oi:
+        return FilterResult(
+            filter_name="options_oi",
+            passed=False,
+            actual_value=float(stock.options_oi),
+            threshold=float(min_oi),
+            reason=f"OI {stock.options_oi} below minimum {min_oi}",
+        )
+
+    return FilterResult(
+        filter_name="options_oi",
+        passed=True,
+        actual_value=float(stock.options_oi),
+        threshold=float(min_oi),
+        reason="",
+    )
+
+
+def filter_options_spread(stock: ScreenedStock, config: ScreenerConfig) -> FilterResult:
+    """Check if nearest ATM put bid/ask spread is within acceptable range.
+
+    Spread is computed as (ask - bid) / midpoint, where midpoint = (bid + ask) / 2.
+
+    Args:
+        stock: ScreenedStock with options_spread field populated.
+        config: ScreenerConfig with options.options_spread_max.
+
+    Returns:
+        FilterResult with pass/fail and reason.
+    """
+    max_spread = config.options.options_spread_max
+
+    if stock.options_spread is None:
+        return FilterResult(
+            filter_name="options_spread",
+            passed=False,
+            actual_value=None,
+            threshold=max_spread,
+            reason="Bid/ask spread data unavailable",
+        )
+
+    if stock.options_spread > max_spread:
+        return FilterResult(
+            filter_name="options_spread",
+            passed=False,
+            actual_value=stock.options_spread,
+            threshold=max_spread,
+            reason=(
+                f"Spread {stock.options_spread:.1%} above maximum "
+                f"{max_spread:.0%}"
+            ),
+        )
+
+    return FilterResult(
+        filter_name="options_spread",
+        passed=True,
+        actual_value=stock.options_spread,
+        threshold=max_spread,
+        reason="",
+    )
+
+
+# ---------------------------------------------------------------------------
+# Put premium yield computation
+# ---------------------------------------------------------------------------
+
+
+def compute_put_premium_yield(bid: float, strike: float, dte: int) -> float | None:
+    """Compute annualized put premium yield.
+
+    Formula: (bid / strike) * (365 / dte) * 100
+
+    Args:
+        bid: Best bid price for the put contract.
+        strike: Strike price of the put contract.
+        dte: Days to expiration.
+
+    Returns:
+        Annualized yield as a percentage (e.g. 36.5 for 36.5%), or None
+        if inputs are invalid (zero strike, zero DTE, negative bid).
+    """
+    if strike <= 0 or dte <= 0 or bid < 0:
+        return None
+    return round((bid / strike) * (365 / dte) * 100, 2)
+
+
+# ---------------------------------------------------------------------------
+# Options chain data fetching helpers
+# ---------------------------------------------------------------------------
+
+
+def _find_nearest_atm_put(contracts: list, stock_price: float):
+    """Find the put contract with strike closest to the stock price.
+
+    Args:
+        contracts: List of Alpaca OptionContract objects.
+        stock_price: Current stock price.
+
+    Returns:
+        The contract with strike closest to stock_price, or None if empty.
+    """
+    if not contracts:
+        return None
+    return min(contracts, key=lambda c: abs(float(c.strike_price) - stock_price))
+
+
+def _fetch_options_chain_data(
+    trade_client,
+    option_client,
+    stock: ScreenedStock,
+) -> None:
+    """Fetch nearest ATM put data and populate stock fields.
+
+    Fetches put contracts in the 14–60 DTE range, finds the nearest ATM put,
+    gets its snapshot for bid/ask data, and populates:
+    - stock.best_put_symbol, best_put_strike, best_put_dte
+    - stock.options_oi (from contract)
+    - stock.best_put_bid, best_put_ask (from snapshot)
+    - stock.options_spread (computed from bid/ask)
+
+    Args:
+        trade_client: Alpaca TradingClient for contract discovery.
+        option_client: Alpaca OptionHistoricalDataClient for snapshots.
+        stock: ScreenedStock to populate (must have price set).
+    """
+    if stock.price is None:
+        return
+
+    today = date.today()
+    min_exp = today + timedelta(days=_OPTIONS_DTE_MIN)
+    max_exp = today + timedelta(days=_OPTIONS_DTE_MAX)
+
+    try:
+        req = GetOptionContractsRequest(
+            underlying_symbols=[stock.symbol],
+            type=ContractType.PUT,
+            status=AssetStatus.ACTIVE,
+            expiration_date_gte=min_exp,
+            expiration_date_lte=max_exp,
+            limit=1000,
+        )
+        response = trade_client.get_option_contracts(req)
+        contracts = response.option_contracts if response.option_contracts else []
+    except Exception:
+        logger.debug("Failed to fetch option contracts for %s", stock.symbol)
+        return
+
+    if not contracts:
+        return
+
+    atm_put = _find_nearest_atm_put(contracts, stock.price)
+    if atm_put is None:
+        return
+
+    # Populate from contract data
+    stock.best_put_symbol = atm_put.symbol
+    stock.best_put_strike = float(atm_put.strike_price)
+    stock.best_put_dte = (atm_put.expiration_date - today).days
+    if atm_put.open_interest is not None:
+        stock.options_oi = int(atm_put.open_interest)
+
+    # Get snapshot for bid/ask
+    try:
+        snap_req = OptionSnapshotRequest(symbol_or_symbols=atm_put.symbol)
+        snapshots = option_client.get_option_snapshot(snap_req)
+    except Exception:
+        logger.debug("Failed to fetch option snapshot for %s", atm_put.symbol)
+        return
+
+    if not snapshots or atm_put.symbol not in snapshots:
+        return
+
+    snap = snapshots[atm_put.symbol]
+    if hasattr(snap, "latest_quote") and snap.latest_quote:
+        stock.best_put_bid = float(snap.latest_quote.bid_price)
+        stock.best_put_ask = float(snap.latest_quote.ask_price)
+
+    # Compute spread
+    if (
+        stock.best_put_bid is not None
+        and stock.best_put_ask is not None
+        and stock.best_put_bid >= 0
+    ):
+        midpoint = (stock.best_put_bid + stock.best_put_ask) / 2
+        if midpoint > 0:
+            stock.options_spread = (stock.best_put_ask - stock.best_put_bid) / midpoint
+
+
+# ---------------------------------------------------------------------------
 # Stage runner helpers
 # ---------------------------------------------------------------------------
 
@@ -782,6 +1002,56 @@ def run_stage_2_filters(
         stock.filter_results.append(r)
 
     return all(r.passed for r in results)
+
+
+def run_stage_3_options(
+    stock: ScreenedStock,
+    config: ScreenerConfig,
+    trade_client,
+    option_client,
+) -> bool:
+    """Run Stage 3 options chain validation.
+
+    Fetches nearest ATM put contract and snapshot, populates stock fields,
+    then runs OI and spread filters.  If both pass, computes put premium
+    yield.
+
+    Args:
+        stock: ScreenedStock that passed all prior filters.
+        config: ScreenerConfig with options OI/spread thresholds.
+        trade_client: Alpaca TradingClient for contract discovery.
+        option_client: Alpaca OptionHistoricalDataClient for snapshots.
+
+    Returns:
+        True only if both OI and spread filters passed.
+    """
+    # Fetch and populate options chain data
+    _fetch_options_chain_data(trade_client, option_client, stock)
+
+    # Run filters
+    results = [
+        filter_options_oi(stock, config),
+        filter_options_spread(stock, config),
+    ]
+    for r in results:
+        stock.filter_results.append(r)
+
+    all_passed = all(r.passed for r in results)
+
+    # Compute yield only if both filters pass and we have valid data
+    if (
+        all_passed
+        and stock.best_put_bid is not None
+        and stock.best_put_strike is not None
+        and stock.best_put_dte is not None
+    ):
+        stock.put_premium_yield = compute_put_premium_yield(
+            stock.best_put_bid,
+            stock.best_put_strike,
+            stock.best_put_dte,
+        )
+
+    return all_passed
 
 
 # ---------------------------------------------------------------------------
@@ -925,15 +1195,17 @@ def run_pipeline(
     config: ScreenerConfig,
     symbol_list_path: str = "config/symbol_list.txt",
     on_progress: Callable | None = None,
+    option_client=None,
 ) -> list[ScreenedStock]:
-    """Run the full 3-stage screening pipeline.
+    """Run the full 4-stage screening pipeline.
 
     Steps:
     1. Fetch universe from Alpaca (all tradable symbols + optionable set).
     2. Merge symbol_list.txt into the universe.
     3. Fetch daily bars for the entire universe.
     4. For each symbol: create ScreenedStock, compute indicators & HV.
-    5. Filter: Stage 1 (cheap) -> Stage 2 (expensive).
+    5. Filter: Stage 1 (cheap) -> Stage 1b (earnings) -> Stage 2 (fundamentals)
+       -> Stage 3 (options chain validation, if option_client provided).
     6. Score all passing stocks.
     7. Sort: scored stocks descending, then unscored.
 
@@ -946,6 +1218,9 @@ def run_pipeline(
         on_progress: Optional callback ``(stage, current, total, symbol=None)``
             called at each pipeline stage boundary.  When *None* (default),
             the pipeline runs silently (backward compatible).
+        option_client: Alpaca OptionHistoricalDataClient for options chain
+            validation.  When *None* (default), Stage 3 options chain
+            validation is skipped (backward compatible).
 
     Returns:
         All ScreenedStock objects (passing + eliminated), sorted by score descending.
@@ -1017,7 +1292,11 @@ def run_pipeline(
 
             if earnings_passed:
                 _progress("Fetching Finnhub data", i + 1, len(universe), symbol=sym)
-                run_stage_2_filters(stock, config, finnhub_client, optionable_set)
+                stage2_passed = run_stage_2_filters(stock, config, finnhub_client, optionable_set)
+
+                if stage2_passed and option_client is not None:
+                    _progress("Validating options chain", i + 1, len(universe), symbol=sym)
+                    run_stage_3_options(stock, config, trade_client, option_client)
 
         stocks.append(stock)
 

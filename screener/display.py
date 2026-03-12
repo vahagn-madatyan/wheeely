@@ -188,6 +188,7 @@ def render_results_table(
     table.add_column("Growth", justify="right")
     table.add_column("RSI", justify="right")
     table.add_column("HV%ile", justify="right")
+    table.add_column("Yield", justify="right")
     table.add_column("Score", justify="right")
     table.add_column("Sector", max_width=20)
 
@@ -196,6 +197,7 @@ def render_results_table(
         score_str = f"[{style}]{stock.score:.1f}[/{style}]"
 
         hv_pct_str = fmt_pct(stock.hv_percentile) if stock.hv_percentile is not None else "N/A"
+        yield_str = fmt_pct(stock.put_premium_yield) if stock.put_premium_yield is not None else "N/A"
 
         table.add_row(
             str(idx),
@@ -208,6 +210,7 @@ def render_results_table(
             fmt_pct(stock.sales_growth),
             fmt_pct(stock.rsi_14),
             hv_pct_str,
+            yield_str,
             score_str,
             stock.sector or "N/A",
         )
@@ -259,8 +262,37 @@ def render_stage_summary(
         )
     )
 
-    # Stage 2: passed all filters
-    stage2_pass = sum(1 for s in stocks if s.passed_all_filters)
+    # Stage 2: Finnhub fundamentals
+    stage2_names = {"market_cap", "debt_equity", "net_margin", "sales_growth", "sector", "optionable"}
+    stage2_pass = sum(
+        1 for s in stocks
+        if not any(f.filter_name == "bar_data" and not f.passed for f in s.filter_results)
+        and all(
+            f.passed for f in s.filter_results if f.filter_name in stage1_names
+        )
+        and any(f.filter_name in stage1_names for f in s.filter_results)
+        and all(
+            f.passed for f in s.filter_results if f.filter_name == "earnings_proximity"
+        )
+        and all(
+            f.passed for f in s.filter_results if f.filter_name in stage2_names
+        )
+        and any(f.filter_name in stage2_names for f in s.filter_results)
+    )
+
+    # Stage 3: Options chain validation
+    options_names = {"options_oi", "options_spread"}
+    has_options_stage = any(
+        any(f.filter_name in options_names for f in s.filter_results)
+        for s in stocks
+    )
+    if has_options_stage:
+        stage3_pass = sum(
+            1 for s in stocks
+            if s.passed_all_filters
+        )
+    else:
+        stage3_pass = stage2_pass
 
     # Scored
     scored = sum(1 for s in stocks if s.passed_all_filters and s.score is not None)
@@ -269,7 +301,12 @@ def render_stage_summary(
     s1_removed = had_bars - stage1_pass
     earn_removed = stage1_pass - earnings_pass
     s2_removed = earnings_pass - stage2_pass
-    score_removed = stage2_pass - scored
+    if has_options_stage:
+        s3_removed = stage2_pass - stage3_pass
+        score_removed = stage3_pass - scored
+    else:
+        s3_removed = 0
+        score_removed = stage2_pass - scored
 
     lines = [
         f"  Universe:    {total:>5}",
@@ -277,8 +314,10 @@ def render_stage_summary(
         f"  Stage 1:     {stage1_pass:>5}  (-{s1_removed})",
         f"  Earnings:    {earnings_pass:>5}  (-{earn_removed})",
         f"  Stage 2:     {stage2_pass:>5}  (-{s2_removed})",
-        f"  Scored:      {scored:>5}  (-{score_removed})",
     ]
+    if has_options_stage:
+        lines.append(f"  Options:     {stage3_pass:>5}  (-{s3_removed})")
+    lines.append(f"  Scored:      {scored:>5}  (-{score_removed})")
 
     panel = Panel(
         "\n".join(lines),
@@ -301,6 +340,7 @@ def render_filter_breakdown(
         "price_range", "avg_volume", "rsi", "sma200", "hv_percentile",
         "earnings_proximity",
         "market_cap", "debt_equity", "net_margin", "sales_growth", "sector", "optionable",
+        "options_oi", "options_spread",
     ]
 
     table = Table(

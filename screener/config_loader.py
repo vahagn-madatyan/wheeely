@@ -90,9 +90,27 @@ class EarningsConfig(BaseModel):
 
 
 class OptionsConfig(BaseModel):
-    """Options screening flags."""
+    """Options screening flags and chain validation thresholds."""
 
     optionable: bool = True
+    options_oi_min: int = 100
+    options_spread_max: float = 0.10
+
+    @field_validator("options_oi_min")
+    @classmethod
+    def options_oi_non_negative(cls, v: int) -> int:
+        if v < 0:
+            raise ValueError("options_oi_min must be >= 0")
+        return v
+
+    @field_validator("options_spread_max")
+    @classmethod
+    def options_spread_reasonable(cls, v: float) -> float:
+        if v <= 0:
+            raise ValueError("options_spread_max must be > 0")
+        if v > 1.0:
+            raise ValueError("options_spread_max must be <= 1.0 (100%)")
+        return v
 
 
 class SectorsConfig(BaseModel):
