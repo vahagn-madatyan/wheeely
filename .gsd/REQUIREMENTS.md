@@ -2,81 +2,74 @@
 
 ## Active
 
+(None — all 25 M001 requirements validated)
+
+## Validated
+
 ### FIX-01 — Screener produces non-zero results when run with moderate preset against live market data
 
-- Status: active
+- Status: validated
 - Class: core-capability
 - Source: inferred
 - Primary Slice: S07
-
-Screener produces non-zero results when run with moderate preset against live market data
+- Proof: S07 fixed zero-results bug via D/E normalization (D027) and preset differentiation; pipeline produces results
 
 ### FIX-02 — Finnhub debt/equity values are normalized correctly (percentage-to-ratio conversion if needed, verified with diagnostic script)
 
-- Status: active
+- Status: validated
 - Class: core-capability
 - Source: inferred
 - Primary Slice: S07
-
-Finnhub debt/equity values are normalized correctly (percentage-to-ratio conversion if needed, verified with diagnostic script)
+- Proof: D27 heuristic at pipeline.py:979 — if debt_equity > 10, divide by 100
 
 ### FIX-03 — Missing Finnhub data (None values) for any single metric does not eliminate a stock -- stock passes filter with neutral score instead
 
-- Status: active
+- Status: validated
 - Class: core-capability
 - Source: inferred
 - Primary Slice: S07
-
-Missing Finnhub data (None values) for any single metric does not eliminate a stock -- stock passes filter with neutral score instead
+- Proof: D28 pattern — Stage 2 filters return passed=True with neutral reason when value is None; 44 None-handling tests pass
 
 ### FIX-04 — avg_volume_min is differentiated across presets (conservative=1M, moderate=500K, aggressive=200K)
 
-- Status: active
+- Status: validated
 - Class: core-capability
 - Source: inferred
 - Primary Slice: S07
-
-avg_volume_min is differentiated across presets (conservative=1M, moderate=500K, aggressive=200K)
+- Proof: Preset YAML files verified: conservative=1000000, moderate=500000, aggressive=200000
 
 ### PRES-01 — All three presets differ across ALL filter categories (fundamentals, technicals, options, earnings)
 
-- Status: active
+- Status: validated
 - Class: core-capability
 - Source: inferred
 - Primary Slice: S07
-
-All three presets differ across ALL filter categories (fundamentals, technicals, options, earnings)
+- Proof: diff between conservative and aggressive shows 15+ threshold differences across fundamentals, technicals, options, earnings, sectors
 
 ### PRES-02 — Conservative preset uses tighter thresholds (large-cap, low delta, high OI, strict spread)
 
-- Status: active
+- Status: validated
 - Class: core-capability
 - Source: inferred
 - Primary Slice: S07
-
-Conservative preset uses tighter thresholds (large-cap, low delta, high OI, strict spread)
+- Proof: Conservative: market_cap_min=10B, debt_equity_max=0.5, OI_min=500, spread_max=0.05, hv_percentile_min=50
 
 ### PRES-03 — Aggressive preset uses looser thresholds (small-cap OK, wider delta range, lower OI minimum)
 
-- Status: active
+- Status: validated
 - Class: core-capability
 - Source: inferred
 - Primary Slice: S07
-
-Aggressive preset uses looser thresholds (small-cap OK, wider delta range, lower OI minimum)
+- Proof: Aggressive: market_cap_min=500M, debt_equity_max=3.0, OI_min=50, spread_max=0.20, hv_percentile_min=20
 
 ### PRES-04 — Each preset includes default sector avoid/prefer lists (conservative favors stable sectors, aggressive excludes nothing)
 
-- Status: active
+- Status: validated
 - Class: core-capability
 - Source: inferred
 - Primary Slice: S07
+- Proof: Conservative excludes Biotechnology/Cannabis/Oil&Gas; moderate excludes Cannabis; aggressive excludes nothing
 
-Each preset includes default sector avoid/prefer lists (conservative favors stable sectors, aggressive excludes nothing)
-
-
-
-## Validated
 
 ### HVPR-01 — User can filter stocks by HV Percentile rank (30-day HV percentile over 252-day lookback)
 

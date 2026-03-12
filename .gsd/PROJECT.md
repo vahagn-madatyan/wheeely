@@ -32,7 +32,7 @@ Automatically identify wheel-strategy-suitable stocks by combining fundamental h
 
 ### Active
 
-(Defined in REQUIREMENTS.md for v1.1 — 25 requirements across FIX, PRES, HVPR, EARN, OPTS, CALL categories)
+(None — all requirements validated through M001)
 
 ### Out of Scope
 
@@ -44,24 +44,31 @@ Automatically identify wheel-strategy-suitable stocks by combining fundamental h
 - AI/ML screening — rule-based filters are transparent and debuggable
 - Multi-broker support — only Alpaca is used
 
-## Current Milestone: M001 — Screener Fix + Covered Calls
+## Completed Milestones
 
-**Goal:** Debug and fix the stock screening pipeline (zero stocks survive filtering), then add covered call screening for the wheel's second leg.
+### M001 — Screener Fix + Covered Calls ✅
 
-**Status:** M001 complete. All 10 slices shipped (S01–S10).
+**Goal:** Debug and fix the stock screening pipeline (zero stocks survive filtering), add HV percentile ranking, earnings proximity filtering, options chain liquidity validation, and covered call screening for the wheel's second leg.
+
+**Outcome:** All 10 slices shipped (S01–S10). 25/25 requirements validated. 345 tests passing, zero failures.
+
+**Key deliverables:**
+- Fixed zero-results pipeline bug (D/E normalization + preset differentiation)
+- 4-stage screening pipeline: technicals → earnings → fundamentals → options chain
+- 3 differentiated presets with sector avoid/prefer lists
+- HV percentile ranking and earnings proximity exclusion
+- Options chain OI/spread validation with put premium yield display
+- `run-call-screener` standalone CLI for covered call recommendations
+- `run-strategy` integration with call screener for assigned positions
+
+## Current Milestone
+
+None — no active milestone.
 
 ## Context
 
-Shipped v1.0 with 5,843 LOC Python across 6 phases (12 plans).
 Tech stack: Python 3.13, alpaca-py, finnhub-python, ta, pydantic, rich, typer, pyyaml.
-345 tests passing, zero failures. 28/28 v1.0 requirements satisfied. 25/25 v1.1 requirements validated.
-
-**v1.0 screening issue (FIXED in S07):** Zero-results bug fixed via D/E normalization and preset differentiation.
-**S08:** HV percentile ranking and earnings proximity filtering active in pipeline. 47 new tests.
-**S09:** Options chain OI/spread validation as Stage 3 in pipeline. Put premium yield in results table. 58 new tests.
-**S10:** Covered call screening with standalone `run-call-screener` CLI and `run-strategy` integration. 43 new tests. All 25 M001 requirements validated.
-
-**Status:** M001 complete. All 10 slices shipped. 345 tests passing, zero failures. 25/25 requirements validated.
+345 tests passing, zero failures. 28/28 v1.0 requirements satisfied. 25/25 M001 requirements validated.
 
 ---
-*Last updated: 2026-03-11 after S10 completion (M001 complete)*
+*Last updated: 2026-03-11 after M001 completion*
