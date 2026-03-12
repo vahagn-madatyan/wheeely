@@ -4,73 +4,65 @@
 
 ## Summary
 
-S02 adds a `--top-n` Typer CLI option to `run-screener` and a "Perf 1M" column to the Rich results table. Both are thin integration layers consuming `run_pipeline(top_n=N)` and `ScreenedStock.perf_1m` — outputs that S01 is supposed to provide.
+S02 is a straightforward wiring slice: add a `--top-n` Typer option to `scripts/run_screener.py` that passes through to `run_pipeline(top_n=N)`, and add a "Perf 1M" column to the Rich results table in `screener/display.py` using the `ScreenedStock.perf_1m` field.
 
-**Critical finding: S01 is not implemented.** The roadmap marks S01 as `[x]` but this is a doctor-created placeholder — no code exists. `ScreenedStock` has no `perf_1m` field, `run_pipeline()` has no `top_n` parameter, and no monthly perf computation exists in `compute_indicators()`. The S01 directory doesn't even exist on disk. `STATE.md` confirms S01 is still in "planning" phase.
+**Critical prerequisite:** S01's code lives on branch `gsd/M002/S01` but has **not been merged** into the current `gsd/M002/S02` branch. The three S01 deliverables S02 depends on — `perf_1m` field on `ScreenedStock`, `compute_monthly_performance()` in `market_data.py`, and `top_n` parameter on `run_pipeline()` — are all absent from the working tree. S02 must merge or cherry-pick S01 before any implementation work begins.
 
-S02 cannot begin until S01 is implemented, or S02's scope must absorb S01's work. Assuming S01 is delivered as specified in the boundary map, S02 itself is straightforward — two insertion points, clear existing patterns, low risk.
+Both changes are mechanically simple with clear precedent in the existing codebase. No new libraries, no architectural decisions, no API calls. Risk is low.
 
 ## Recommendation
 
-**Block on S01 completion first, then implement S02.** Do not merge scopes — S01 is medium-risk (perf computation math, sort/cap logic in pipeline loop, `perf_1m` dataclass field) while S02 is low-risk (CLI flag pass-through, display column). Keeping them separate preserves clean verification.
-
-Once S01 delivers:
-1. Add `--top-n` as `typer.Option(int | None, default=None)` in `run_screener.py` and pass through to `run_pipeline(top_n=N)`.
-2. Add "Perf 1M" column in `render_results_table()` using existing `fmt_pct()` helper — follows exact pattern of HV%ile and Yield columns added in S08/S09.
-3. Test CLI flag parsing with `CliRunner` (pattern: `test_cli_screener.py`), test column rendering with `Console(file=StringIO())` (pattern: `test_options_chain.py::TestDisplayYieldColumn`).
+1. **Merge S01 first.** `git merge gsd/M002/S01` into `gsd/M002/S02` to bring in the `perf_1m` field, `compute_monthly_performance()`, `top_n` parameter, and their tests. Verify all 345+ existing tests still pass after merge.
+2. **CLI flag:** Add `--top-n` as a `typer.Option` with `int | None` type, default `None`. Pass it to `run_pipeline(top_n=top_n)`. Follow the exact pattern of the existing `--verbose` and `--preset` options.
+3. **Display column:** Insert a "Perf 1M" column into `render_results_table()` between "HV%ile" and "Yield". Format with `fmt_pct()` which already handles sign and None→"N/A".
+4. **Tests:** Add CLI flag tests to `tests/test_cli_screener.py` (help text, passthrough to pipeline) and display column tests to `tests/test_display.py` (column header present, value formatting, None handling). Follow existing mock/capture patterns exactly.
 
 ## Don't Hand-Roll
 
 | Problem | Existing Solution | Why Use It |
 |---------|------------------|------------|
-| CLI option | `typer.Option` with `Annotated[int \| None]` | Already used for all other flags in `run_screener.py` |
-| Percentage formatting | `fmt_pct()` in `screener/display.py` | Handles None→"N/A", sign, consistent decimal places |
-| Test CLI invocation | `typer.testing.CliRunner` | Already used in `test_cli_screener.py` for all CLI tests |
-| Test display capture | `Console(file=StringIO(), width=200)` | Pattern from `test_options_chain.py::TestDisplayYieldColumn` |
+| CLI option declaration | `typer.Option()` with `Annotated` type hints | Already used for `--verbose`, `--preset`, `--config`, `--update-symbols` |
+| Percentage formatting | `display.fmt_pct()` | Handles None→"N/A" and sign; already used for RSI, HV%ile, Yield |
+| Console capture in tests | `Console(file=StringIO(), width=120)` | Pattern from every existing display test |
+| CLI test invocation | `typer.testing.CliRunner` + `runner.invoke(app, [...])` | Pattern from `test_cli_screener.py` |
 
 ## Existing Code and Patterns
 
-- **`scripts/run_screener.py:run()`** — Target for `--top-n` option. All existing options use `Annotated[type, typer.Option(...)]` pattern. The `run_pipeline()` call on line ~89 is where `top_n=N` gets passed through.
-- **`screener/display.py:render_results_table()`** — Target for "Perf 1M" column. Columns added with `table.add_column("Name", justify="right")` then values emitted in `table.add_row()`. HV%ile and Yield columns (added in S08/S09) are the exact precedent — both use `fmt_pct()` with None→"N/A" fallback.
-- **`tests/test_cli_screener.py`** — CLI test pattern: patch `run_pipeline`, `load_config`, `create_broker_client`, etc. at module level (`scripts.run_screener.X`), invoke via `runner.invoke(app, ["--flag"])`, assert on `result.exit_code` and mock call args.
-- **`tests/test_options_chain.py::TestDisplayYieldColumn`** — Display column test pattern: construct a `ScreenedStock` with the field populated, add a passing `FilterResult`, render to `Console(file=StringIO())`, assert column header and formatted value appear in output.
-- **`tests/test_display.py::TestRenderResultsTable.test_table_has_column_headers`** — Asserts all expected column names appear; must be updated to include "Perf 1M".
-- **`models/screened_stock.py`** — Where `perf_1m: Optional[float] = None` will live (S01's job). S02 only reads this field for display.
+- `scripts/run_screener.py:run()` — CLI entry point with 4 existing Typer options. Add `top_n` as 5th option, pass to `run_pipeline()`. The `run_pipeline()` call at line ~87 already passes `option_client` — just add `top_n=top_n`.
+- `screener/display.py:render_results_table()` — 12 existing columns. Insert "Perf 1M" column after "HV%ile" (column 10) and before "Yield" (column 11). Use `fmt_pct(stock.perf_1m)` for the row value — identical to `hv_pct_str` pattern.
+- `tests/test_cli_screener.py` — 5 existing tests. `test_screener_help()` checks for option text in help output. `test_default_no_file_writes()` patches `run_pipeline` and verifies it was called — extend to check `top_n` kwarg. Pattern: patch all external deps at `scripts.run_screener.*` level.
+- `tests/test_display.py:TestRenderResultsTable` — 7 existing tests. `test_table_has_column_headers()` checks column names in captured output. `_make_stock()` helper creates `ScreenedStock` instances — add `perf_1m` parameter.
+- `models/screened_stock.py` — (S01 adds) `perf_1m: Optional[float] = None` field after `hv_percentile`. No display-side changes needed to the model.
+- `screener/pipeline.py:run_pipeline()` — (S01 adds) `top_n: int | None = None` parameter. S02 just needs to wire the CLI flag to this parameter.
 
 ## Constraints
 
-- **S01 must be complete first.** `ScreenedStock.perf_1m` and `run_pipeline(top_n=)` don't exist yet. S02 cannot be coded or tested without them.
-- **Typer 0.24.1** — `int | None` union type works natively; no `Optional[int]` gymnastics needed. Already proven by `preset: PresetName | None` on line 56 of `run_screener.py`.
-- **`--top-n` must accept positive integers only.** Typer doesn't enforce `> 0` by default — add a `typer.Option(min=1)` constraint or validate manually.
-- **Backward compatibility is critical.** `--top-n` defaults to `None`, which passes `top_n=None` to `run_pipeline()`, which means no cap (TOPN-06).
-- **Column order matters.** "Perf 1M" should appear near Score/Sector (end of table) since it's a sort-key, not a filter metric. Logical placement: after HV%ile, before Yield.
-- **`test_table_has_column_headers`** in `test_display.py` line 205 asserts specific column names — must be updated to include "Perf 1M" or the test will fail.
+- **S01 merge required first.** Without the `perf_1m` field and `top_n` parameter, S02 code has nothing to wire to.
+- `fmt_pct()` returns `"-5.2%"` for negative values — sign is included automatically. The TOPN-05 requirement says "Formatted as percentage with sign (e.g. -5.2%, +3.1%)" — `fmt_pct()` does NOT add a `+` prefix for positive values. Either accept `"5.2%"` for positives (no `+` sign) or create a `fmt_signed_pct()` variant. This is a minor cosmetic decision.
+- `typer.Option` type must be `int | None` (not `Optional[int]`) to match the project's Python 3.10+ style used elsewhere.
+- Column insertion order matters for visual flow — "Perf 1M" fits logically between "HV%ile" (volatility context) and "Yield" (options premium).
 
 ## Common Pitfalls
 
-- **Forgetting to pass `top_n` through the call chain** — The CLI option must flow from `run()` → `run_pipeline()` kwargs. Easy to add the option but forget to wire it into the actual call.
-- **Column/row mismatch in `add_row()`** — `render_results_table()` has 13 `add_column()` calls matched by 13 positional args in `add_row()`. Adding a column without adding the corresponding row value (or adding in wrong position) causes a silent misalignment. Count carefully.
-- **Not updating `test_table_has_column_headers`** — This test explicitly lists expected column names. Adding the column to display without updating this test will cause a false-negative (test passes but doesn't verify the new column) — worse, it won't catch regressions.
-- **Typer `min` validation** — `typer.Option(min=1)` works for `int` but not for `int | None`. Need to handle `None` (no flag) vs `0` (invalid) explicitly if using union type.
+- **Forgetting to pass `top_n` through in the `run_pipeline()` call** — The CLI flag must be forwarded as a keyword argument. Verify with a test that `mock_pipeline.call_args` includes `top_n=N` when `--top-n N` is passed.
+- **Column count mismatch in tests** — Adding a column to the table means `_make_stock()` helper should set `perf_1m` on test stocks to avoid silent "N/A" values that could mask bugs. Update `_make_passing_stocks()` too.
+- **Help text for `--top-n` must mention positive integer** — Typer doesn't enforce `> 0` by default for `int | None`. Either add a Typer callback validator or document in help text. The pipeline itself handles `top_n=0` gracefully (empty results), so this is low risk.
 
 ## Open Risks
 
-- **S01 not implemented** — The only real risk. If S01's API surface differs from the boundary map (different function signature, different field name), S02 plans need adjustment. Mitigated by S01 having a clear contract in the roadmap.
-- **Perf 1M sign convention** — The boundary map says percentage values (e.g. -5.2 for a 5.2% decline). `fmt_pct()` already handles sign correctly (`-5.2%`), but explicit `+` prefix for positive values would improve readability. Need to decide: use `fmt_pct()` as-is or add a signed variant. Minor — can be decided during execution.
+- **S01 merge conflicts.** The S01 branch modifies `pipeline.py`, `market_data.py`, `screened_stock.py`, and both test files. If any of these were modified on the S02 branch independently (unlikely — only `.gsd/` files exist on S02 so far), there could be merge conflicts. Risk: very low.
+- **Positive sign display.** Requirement TOPN-05 explicitly shows `+3.1%` but `fmt_pct()` produces `3.1%`. May need a small formatting tweak. Risk: trivial, cosmetic only.
 
 ## Skills Discovered
 
 | Technology | Skill | Status |
 |------------|-------|--------|
-| Typer CLI | — | none found (standard library-level usage, no skill needed) |
-| Rich tables | — | none found (standard library-level usage, no skill needed) |
+| Typer CLI | — | none found (standard library-level, no skill needed) |
+| Rich tables | — | none found (standard library-level, no skill needed) |
+| Python/pytest | — | available skills are React/Expo/SwiftUI focused, not relevant |
 
 ## Sources
 
-- `scripts/run_screener.py` — current CLI structure and Typer patterns
-- `screener/display.py` — current table rendering and `fmt_pct()` helper
-- `tests/test_cli_screener.py` — CLI test patterns
-- `tests/test_options_chain.py:630-690` — display column test pattern (Yield column)
-- `tests/test_display.py:205` — column header assertion that needs updating
-- `models/screened_stock.py` — current ScreenedStock dataclass (no `perf_1m` yet)
-- `screener/pipeline.py:1191` — current `run_pipeline()` signature (no `top_n` yet)
+- Codebase inspection: `scripts/run_screener.py`, `screener/display.py`, `tests/test_cli_screener.py`, `tests/test_display.py`
+- S01 branch diff: `git diff gsd/M002/S02..gsd/M002/S01` — confirmed all 3 S01 deliverables exist and are well-tested
+- Typer 0.24.1 installed; `typer.Option` with `Annotated` pattern already in use
