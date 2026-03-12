@@ -15,4 +15,4 @@
 - None
 
 ## Next Action
-Execute T01: Merge scanning-improvements branch and validate test baseline in slice S07.
+Execute T02 in slice S07 (next task after T01 merge baseline).

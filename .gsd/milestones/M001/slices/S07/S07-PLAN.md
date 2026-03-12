@@ -43,7 +43,7 @@
 
 ## Tasks
 
-- [ ] **T01: Merge scanning-improvements branch and validate test baseline** `est:20m`
+- [x] **T01: Merge scanning-improvements branch and validate test baseline** `est:20m`
   - Why: All S01–S06 screener source code (pipeline, filters, tests, presets) exists only in the `scanning-improvements` branch. Nothing can be edited until it's merged into `gsd/M001/S07`.
   - Files: `screener/*.py`, `tests/test_pipeline.py`, `config/presets/*.yaml`, `models/screened_stock.py`, `pyproject.toml`
   - Do: `git merge scanning-improvements` into current branch, resolve any conflicts in pyproject.toml/.gitignore (docs vs code — should be clean). Run `pytest tests/test_pipeline.py -v` to confirm all 63 tests pass as baseline.
