@@ -39,7 +39,7 @@ This milestone is complete only when all are true:
 
 ## Slices
 
-- [ ] **S01: Monthly Perf + Pipeline Cap** `risk:medium` `depends:[]`
+- [x] **S01: Monthly Perf + Pipeline Cap** `risk:medium` `depends:[]`
   > After this: `run_pipeline(top_n=20)` returns results from only the 20 worst-performing Stage 1 survivors, with `perf_1m` populated on all ScreenedStock objects that have bar data.
 
 - [ ] **S02: CLI Flag + Display** `risk:low` `depends:[S01]`

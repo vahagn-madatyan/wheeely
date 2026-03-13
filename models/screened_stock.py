@@ -37,6 +37,7 @@ class ScreenedStock:
     above_sma200: Optional[bool] = None
     hv_30: Optional[float] = None
     hv_percentile: Optional[float] = None
+    perf_1m: Optional[float] = None
 
     # Earnings data (Phase 3)
     next_earnings_date: Optional[str] = None

@@ -114,3 +114,20 @@ def compute_indicators(bars_df: pd.DataFrame) -> dict:
         result["above_sma200"] = None
 
     return result
+
+
+def compute_monthly_performance(bars_df: pd.DataFrame) -> float | None:
+    """Compute 1-month (22 trading day) price performance as a percentage.
+
+    Args:
+        bars_df: DataFrame with a 'close' column (from Alpaca bars).
+
+    Returns:
+        Percentage change over the last 22 trading days (e.g. -5.2 for a 5.2% decline),
+        or None if fewer than 22 close prices are available.
+    """
+    if len(bars_df) < 22:
+        return None
+
+    close = bars_df["close"]
+    return (close.iloc[-1] / close.iloc[-22] - 1) * 100

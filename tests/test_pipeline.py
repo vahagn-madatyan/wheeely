@@ -1285,3 +1285,270 @@ class TestRunPipelineProgress:
         )
 
         assert len(result) == 2  # PASS + NOBAR
+
+
+# ===========================================================================
+# TestTopNPipelineCap
+# ===========================================================================
+
+class TestTopNPipelineCap:
+    """run_pipeline: top_n sort/cap behavior."""
+
+    def _setup_mocks(self, symbols):
+        """Create common mocks for N symbols that all pass Stage 1.
+
+        Args:
+            symbols: List of ticker symbol strings.
+
+        Returns:
+            (trade_client, stock_client, finnhub_client, config).
+        """
+        assets = []
+        opt_assets = []
+        for sym in symbols:
+            asset = MagicMock()
+            asset.symbol = sym
+            asset.tradable = True
+            assets.append(asset)
+
+            opt = MagicMock()
+            opt.symbol = sym
+            opt_assets.append(opt)
+
+        trade_client = MagicMock()
+        trade_client.get_all_assets.side_effect = [assets, opt_assets]
+
+        stock_client = MagicMock()
+
+        finnhub_client = MagicMock()
+        finnhub_client.company_profile.return_value = {
+            "marketCapitalization": 5000,
+            "finnhubIndustry": "Technology",
+        }
+        finnhub_client.company_metrics.return_value = {
+            "metric": {
+                "totalDebtToEquity": 0.5,
+                "netProfitMarginTTM": 15.0,
+                "revenueGrowthQuarterlyYoy": 10.0,
+            }
+        }
+        finnhub_client.earnings_for_symbol.return_value = None
+
+        config = ScreenerConfig.model_validate({
+            "sectors": {"include": [], "exclude": []},
+        })
+
+        return trade_client, stock_client, finnhub_client, config
+
+    def _make_bars_dict(self, symbols):
+        """Create bar data for specified symbols (250 rows each, passes Stage 1)."""
+        bars = {}
+        for i, sym in enumerate(symbols):
+            np.random.seed(42 + i)
+            prices = 25 + np.cumsum(np.random.normal(0, 0.1, 250))
+            bars[sym] = pd.DataFrame({
+                "close": prices,
+                "volume": [3_000_000] * 250,
+            })
+        return bars
+
+    def _passing_indicators(self, bars_df):
+        """Return indicators that pass all Stage 1 filters."""
+        close = bars_df["close"]
+        price = float(close.iloc[-1])
+        return {
+            "price": price,
+            "avg_volume": 3_000_000.0,
+            "rsi_14": 45.0,
+            "sma_200": price - 1.0,
+            "above_sma200": True,
+        }
+
+    @patch("screener.pipeline.compute_monthly_performance")
+    @patch("screener.pipeline.fetch_daily_bars")
+    @patch("screener.pipeline.compute_indicators")
+    @patch("screener.pipeline.compute_hv_percentile")
+    @patch("screener.pipeline.compute_historical_volatility")
+    def test_top_n_caps_stage2_calls(
+        self, mock_hv, mock_hv_pct, mock_indicators, mock_bars, mock_perf
+    ):
+        """top_n=2 with 5 Stage 1 survivors → only 2 get Finnhub calls."""
+        from screener.pipeline import run_pipeline
+
+        symbols = ["SYM1", "SYM2", "SYM3", "SYM4", "SYM5"]
+        trade_client, stock_client, finnhub_client, config = self._setup_mocks(symbols)
+        mock_bars.return_value = self._make_bars_dict(symbols)
+        mock_indicators.side_effect = lambda df: self._passing_indicators(df)
+        mock_hv.return_value = 0.35
+        mock_hv_pct.return_value = 55.0
+        mock_perf.side_effect = [-10.0, -5.0, 0.0, 5.0, 10.0]
+
+        run_pipeline(
+            trade_client, stock_client, finnhub_client, config,
+            symbol_list_path="/nonexistent/path.txt",
+            top_n=2,
+        )
+
+        # Only 2 of 5 survivors should get expensive Finnhub calls
+        assert finnhub_client.company_profile.call_count == 2
+        assert finnhub_client.earnings_for_symbol.call_count == 2
+
+    @patch("screener.pipeline.compute_monthly_performance")
+    @patch("screener.pipeline.fetch_daily_bars")
+    @patch("screener.pipeline.compute_indicators")
+    @patch("screener.pipeline.compute_hv_percentile")
+    @patch("screener.pipeline.compute_historical_volatility")
+    def test_top_n_none_processes_all(
+        self, mock_hv, mock_hv_pct, mock_indicators, mock_bars, mock_perf
+    ):
+        """top_n=None → all 5 survivors get Finnhub calls (backward compat)."""
+        from screener.pipeline import run_pipeline
+
+        symbols = ["SYM1", "SYM2", "SYM3", "SYM4", "SYM5"]
+        trade_client, stock_client, finnhub_client, config = self._setup_mocks(symbols)
+        mock_bars.return_value = self._make_bars_dict(symbols)
+        mock_indicators.side_effect = lambda df: self._passing_indicators(df)
+        mock_hv.return_value = 0.35
+        mock_hv_pct.return_value = 55.0
+        mock_perf.side_effect = [-10.0, -5.0, 0.0, 5.0, 10.0]
+
+        run_pipeline(
+            trade_client, stock_client, finnhub_client, config,
+            symbol_list_path="/nonexistent/path.txt",
+            top_n=None,
+        )
+
+        # All 5 survivors should get Finnhub calls
+        assert finnhub_client.company_profile.call_count == 5
+        assert finnhub_client.earnings_for_symbol.call_count == 5
+
+    @patch("screener.pipeline.compute_monthly_performance")
+    @patch("screener.pipeline.fetch_daily_bars")
+    @patch("screener.pipeline.compute_indicators")
+    @patch("screener.pipeline.compute_hv_percentile")
+    @patch("screener.pipeline.compute_historical_volatility")
+    def test_sort_ascending_perf(
+        self, mock_hv, mock_hv_pct, mock_indicators, mock_bars, mock_perf
+    ):
+        """Survivors sorted ascending by perf_1m before cap is applied."""
+        from screener.pipeline import run_pipeline
+
+        symbols = ["SYM1", "SYM2", "SYM3", "SYM4", "SYM5"]
+        trade_client, stock_client, finnhub_client, config = self._setup_mocks(symbols)
+        mock_bars.return_value = self._make_bars_dict(symbols)
+        mock_indicators.side_effect = lambda df: self._passing_indicators(df)
+        mock_hv.return_value = 0.35
+        mock_hv_pct.return_value = 55.0
+        # Unsorted perf: SYM1=10, SYM2=-10, SYM3=5, SYM4=-5, SYM5=0
+        mock_perf.side_effect = [10.0, -10.0, 5.0, -5.0, 0.0]
+
+        run_pipeline(
+            trade_client, stock_client, finnhub_client, config,
+            symbol_list_path="/nonexistent/path.txt",
+            top_n=3,
+        )
+
+        # Sorted ascending: SYM2(-10), SYM4(-5), SYM5(0) selected
+        called_symbols = [
+            call.args[0] for call in finnhub_client.company_profile.call_args_list
+        ]
+        assert called_symbols == ["SYM2", "SYM4", "SYM5"]
+
+    @patch("screener.pipeline.compute_monthly_performance")
+    @patch("screener.pipeline.fetch_daily_bars")
+    @patch("screener.pipeline.compute_indicators")
+    @patch("screener.pipeline.compute_hv_percentile")
+    @patch("screener.pipeline.compute_historical_volatility")
+    def test_none_perf_sorts_last(
+        self, mock_hv, mock_hv_pct, mock_indicators, mock_bars, mock_perf
+    ):
+        """Stocks with perf_1m=None sort after stocks with real values."""
+        from screener.pipeline import run_pipeline
+
+        symbols = ["SYM1", "SYM2", "SYM3"]
+        trade_client, stock_client, finnhub_client, config = self._setup_mocks(symbols)
+        mock_bars.return_value = self._make_bars_dict(symbols)
+        mock_indicators.side_effect = lambda df: self._passing_indicators(df)
+        mock_hv.return_value = 0.35
+        mock_hv_pct.return_value = 55.0
+        # SYM1=-5, SYM2=None, SYM3=-10
+        mock_perf.side_effect = [-5.0, None, -10.0]
+
+        run_pipeline(
+            trade_client, stock_client, finnhub_client, config,
+            symbol_list_path="/nonexistent/path.txt",
+            top_n=2,
+        )
+
+        # Sorted ascending (None last): SYM3(-10), SYM1(-5) — SYM2 capped out
+        called_symbols = [
+            call.args[0] for call in finnhub_client.company_profile.call_args_list
+        ]
+        assert called_symbols == ["SYM3", "SYM1"]
+        # SYM2 (None perf) should NOT get Finnhub calls
+        all_earnings_symbols = [
+            call.args[0] for call in finnhub_client.earnings_for_symbol.call_args_list
+        ]
+        assert "SYM2" not in all_earnings_symbols
+
+    @patch("screener.pipeline.compute_monthly_performance")
+    @patch("screener.pipeline.fetch_daily_bars")
+    @patch("screener.pipeline.compute_indicators")
+    @patch("screener.pipeline.compute_hv_percentile")
+    @patch("screener.pipeline.compute_historical_volatility")
+    def test_perf_1m_populated_on_stocks(
+        self, mock_hv, mock_hv_pct, mock_indicators, mock_bars, mock_perf
+    ):
+        """Stocks with bar data have perf_1m set; stocks without have None."""
+        from screener.pipeline import run_pipeline
+
+        symbols = ["NOBAR", "SYM1", "SYM2"]
+        trade_client, stock_client, finnhub_client, config = self._setup_mocks(symbols)
+        # Only SYM1 and SYM2 have bars — NOBAR absent
+        mock_bars.return_value = self._make_bars_dict(["SYM1", "SYM2"])
+        mock_indicators.side_effect = lambda df: self._passing_indicators(df)
+        mock_hv.return_value = 0.35
+        mock_hv_pct.return_value = 55.0
+        mock_perf.side_effect = [-5.0, 3.0]
+
+        result = run_pipeline(
+            trade_client, stock_client, finnhub_client, config,
+            symbol_list_path="/nonexistent/path.txt",
+        )
+
+        sym1 = next(s for s in result if s.symbol == "SYM1")
+        sym2 = next(s for s in result if s.symbol == "SYM2")
+        nobar = next(s for s in result if s.symbol == "NOBAR")
+
+        assert sym1.perf_1m == -5.0
+        assert sym2.perf_1m == 3.0
+        assert nobar.perf_1m is None
+
+    @patch("screener.pipeline.compute_monthly_performance")
+    @patch("screener.pipeline.fetch_daily_bars")
+    @patch("screener.pipeline.compute_indicators")
+    @patch("screener.pipeline.compute_hv_percentile")
+    @patch("screener.pipeline.compute_historical_volatility")
+    def test_all_stocks_still_returned(
+        self, mock_hv, mock_hv_pct, mock_indicators, mock_bars, mock_perf
+    ):
+        """Both passing and eliminated stocks in result (no silent drops)."""
+        from screener.pipeline import run_pipeline
+
+        symbols = ["SYM1", "SYM2", "SYM3", "SYM4", "SYM5"]
+        trade_client, stock_client, finnhub_client, config = self._setup_mocks(symbols)
+        mock_bars.return_value = self._make_bars_dict(symbols)
+        mock_indicators.side_effect = lambda df: self._passing_indicators(df)
+        mock_hv.return_value = 0.35
+        mock_hv_pct.return_value = 55.0
+        mock_perf.side_effect = [-10.0, -5.0, 0.0, 5.0, 10.0]
+
+        result = run_pipeline(
+            trade_client, stock_client, finnhub_client, config,
+            symbol_list_path="/nonexistent/path.txt",
+            top_n=2,
+        )
+
+        # All 5 stocks still returned even though only 2 went through Pass 2
+        assert len(result) == 5
+        assert {s.symbol for s in result} == {"SYM1", "SYM2", "SYM3", "SYM4", "SYM5"}

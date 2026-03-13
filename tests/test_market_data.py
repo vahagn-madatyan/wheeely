@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch, call
 import pandas as pd
 import pytest
 
-from screener.market_data import fetch_daily_bars, compute_indicators
+from screener.market_data import fetch_daily_bars, compute_indicators, compute_monthly_performance
 
 
 # ---------------------------------------------------------------------------
@@ -214,3 +214,68 @@ class TestFetchDailyBars:
             assert isinstance(result[sym], pd.DataFrame)
             assert "close" in result[sym].columns
             assert "volume" in result[sym].columns
+
+
+# ---------------------------------------------------------------------------
+# TestComputeMonthlyPerformance -- pure math tests
+# ---------------------------------------------------------------------------
+
+
+class TestComputeMonthlyPerformance:
+    """Tests for compute_monthly_performance() using synthetic bar DataFrames."""
+
+    def _make_bars(self, closes: list[float]) -> pd.DataFrame:
+        """Create a synthetic bar DataFrame from a list of close prices."""
+        n = len(closes)
+        dates = pd.bdate_range(end="2026-03-06", periods=n)
+        return pd.DataFrame(
+            {"close": closes, "volume": [1_000_000.0] * n},
+            index=dates,
+        )
+
+    def test_exact_22_bars_computes_correctly(self):
+        """With exactly 22 bars, should compute (close[-1]/close[-22] - 1)*100."""
+        # close[0]=200, close[21]=210 => (210/200 - 1)*100 = 5.0
+        closes = [200.0] + [205.0] * 20 + [210.0]
+        df = self._make_bars(closes)
+        result = compute_monthly_performance(df)
+        assert result == pytest.approx(5.0)
+
+    def test_250_bars_uses_last_22(self):
+        """With 250 bars, should use iloc[-1] and iloc[-22], ignoring earlier data."""
+        # 228 bars of noise, then close[-22]=80.0, 20 filler, close[-1]=100.0
+        closes = [999.0] * 228 + [80.0] + [90.0] * 20 + [100.0]
+        assert len(closes) == 250
+        df = self._make_bars(closes)
+        result = compute_monthly_performance(df)
+        # (100/80 - 1)*100 = 25.0
+        assert result == pytest.approx(25.0)
+
+    def test_insufficient_data_returns_none(self):
+        """With fewer than 22 bars, should return None."""
+        closes = [100.0] * 21
+        df = self._make_bars(closes)
+        assert compute_monthly_performance(df) is None
+
+    def test_negative_return(self):
+        """Declining price should give a negative percentage."""
+        # close[-22]=100, close[-1]=90 => (90/100 - 1)*100 = -10.0
+        closes = [100.0] + [95.0] * 20 + [90.0]
+        df = self._make_bars(closes)
+        result = compute_monthly_performance(df)
+        assert result == pytest.approx(-10.0)
+
+    def test_positive_return(self):
+        """Rising price should give a positive percentage."""
+        # close[-22]=50, close[-1]=60 => (60/50 - 1)*100 = 20.0
+        closes = [50.0] + [55.0] * 20 + [60.0]
+        df = self._make_bars(closes)
+        result = compute_monthly_performance(df)
+        assert result == pytest.approx(20.0)
+
+    def test_flat_return_is_zero(self):
+        """Same close price over the period should give 0.0."""
+        closes = [100.0] * 22
+        df = self._make_bars(closes)
+        result = compute_monthly_performance(df)
+        assert result == pytest.approx(0.0)

@@ -25,7 +25,7 @@ from alpaca.trading.requests import GetAssetsRequest, GetOptionContractsRequest
 from models.screened_stock import FilterResult, ScreenedStock
 from screener.config_loader import ScreenerConfig
 from screener.finnhub_client import FinnhubClient, extract_metric
-from screener.market_data import compute_indicators, fetch_daily_bars
+from screener.market_data import compute_indicators, compute_monthly_performance, fetch_daily_bars
 
 logger = stdlib_logging.getLogger(__name__)
 
@@ -1196,18 +1196,22 @@ def run_pipeline(
     symbol_list_path: str = "config/symbol_list.txt",
     on_progress: Callable | None = None,
     option_client=None,
+    top_n: int | None = None,
 ) -> list[ScreenedStock]:
-    """Run the full 4-stage screening pipeline.
+    """Run the full screening pipeline with two-pass architecture.
 
     Steps:
     1. Fetch universe from Alpaca (all tradable symbols + optionable set).
     2. Merge symbol_list.txt into the universe.
     3. Fetch daily bars for the entire universe.
-    4. For each symbol: create ScreenedStock, compute indicators & HV.
-    5. Filter: Stage 1 (cheap) -> Stage 1b (earnings) -> Stage 2 (fundamentals)
-       -> Stage 3 (options chain validation, if option_client provided).
-    6. Score all passing stocks.
-    7. Sort: scored stocks descending, then unscored.
+    4. Pass 1 — for each symbol: create ScreenedStock, compute indicators,
+       HV, and perf_1m.  Run Stage 1 (cheap) filters.
+    5. Sort Stage 1 survivors ascending by perf_1m (None last).  If top_n
+       is set, cap survivors to top N.
+    6. Pass 2 — for each (capped) survivor: Stage 1b (earnings) ->
+       Stage 2 (fundamentals) -> Stage 3 (options chain, if option_client).
+    7. Score all passing stocks.
+    8. Sort: scored stocks descending, then unscored.
 
     Args:
         trade_client: Alpaca TradingClient for asset universe fetching.
@@ -1221,6 +1225,11 @@ def run_pipeline(
         option_client: Alpaca OptionHistoricalDataClient for options chain
             validation.  When *None* (default), Stage 3 options chain
             validation is skipped (backward compatible).
+        top_n: When set, caps the number of Stage 1 survivors that proceed
+            to expensive Stage 1b/2/3 processing.  Survivors are sorted
+            ascending by ``perf_1m`` (worst recent performers first, None
+            last) and the top N are kept.  When *None* (default), all
+            survivors proceed (backward compatible).
 
     Returns:
         All ScreenedStock objects (passing + eliminated), sorted by score descending.
@@ -1249,8 +1258,9 @@ def run_pipeline(
         on_progress=_progress,
     )
 
-    # Step 4: Build ScreenedStock objects and populate indicators
+    # Pass 1: Build ScreenedStock objects, compute indicators + perf_1m, run Stage 1
     stocks: list[ScreenedStock] = []
+    stage1_survivors: list[ScreenedStock] = []
     for i, sym in enumerate(universe):
         stock = ScreenedStock.from_symbol(sym)
 
@@ -1263,6 +1273,7 @@ def run_pipeline(
             stock.above_sma200 = indicators.get("above_sma200")
             stock.hv_30 = compute_historical_volatility(bars[sym])
             stock.hv_percentile = compute_hv_percentile(bars[sym])
+            stock.perf_1m = compute_monthly_performance(bars[sym])
         else:
             # No bar data — record and skip further stages
             stock.filter_results.append(
@@ -1275,32 +1286,49 @@ def run_pipeline(
             stocks.append(stock)
             continue
 
-        # Step 5: Filter stages
         _progress("Filtering Stage 1", i + 1, len(universe))
         stage1_passed = run_stage_1_filters(stock, config)
 
         if stage1_passed:
-            # Stage 1b: Earnings proximity filter (cheap — single Finnhub call)
-            _progress("Checking earnings", i + 1, len(universe), symbol=sym)
-            earnings_date = finnhub_client.earnings_for_symbol(sym)
-            if earnings_date is not None:
-                stock.next_earnings_date = earnings_date.isoformat()
-                stock.days_to_earnings = (earnings_date - date.today()).days
-            earnings_result = filter_earnings_proximity(stock, config)
-            stock.filter_results.append(earnings_result)
-            earnings_passed = earnings_result.passed
-
-            if earnings_passed:
-                _progress("Fetching Finnhub data", i + 1, len(universe), symbol=sym)
-                stage2_passed = run_stage_2_filters(stock, config, finnhub_client, optionable_set)
-
-                if stage2_passed and option_client is not None:
-                    _progress("Validating options chain", i + 1, len(universe), symbol=sym)
-                    run_stage_3_options(stock, config, trade_client, option_client)
+            stage1_survivors.append(stock)
 
         stocks.append(stock)
 
-    # Step 6: Score passing stocks
+    # Sort/cap: sort Stage 1 survivors ascending by perf_1m (None last)
+    stage1_survivors.sort(
+        key=lambda s: s.perf_1m if s.perf_1m is not None else float('inf')
+    )
+    if top_n is not None and len(stage1_survivors) > top_n:
+        logger.info(
+            "Top-N cap: %d of %d Stage 1 survivors selected",
+            top_n,
+            len(stage1_survivors),
+        )
+        stage1_survivors = stage1_survivors[:top_n]
+
+    # Pass 2: Run Stage 1b/2/3 for capped survivors only
+    for i, stock in enumerate(stage1_survivors):
+        sym = stock.symbol
+
+        # Stage 1b: Earnings proximity filter (cheap — single Finnhub call)
+        _progress("Checking earnings", i + 1, len(stage1_survivors), symbol=sym)
+        earnings_date = finnhub_client.earnings_for_symbol(sym)
+        if earnings_date is not None:
+            stock.next_earnings_date = earnings_date.isoformat()
+            stock.days_to_earnings = (earnings_date - date.today()).days
+        earnings_result = filter_earnings_proximity(stock, config)
+        stock.filter_results.append(earnings_result)
+        earnings_passed = earnings_result.passed
+
+        if earnings_passed:
+            _progress("Fetching Finnhub data", i + 1, len(stage1_survivors), symbol=sym)
+            stage2_passed = run_stage_2_filters(stock, config, finnhub_client, optionable_set)
+
+            if stage2_passed and option_client is not None:
+                _progress("Validating options chain", i + 1, len(stage1_survivors), symbol=sym)
+                run_stage_3_options(stock, config, trade_client, option_client)
+
+    # Score passing stocks
     passing = [s for s in stocks if s.passed_all_filters]
     for stock in passing:
         stock.score = compute_wheel_score(stock, passing)
@@ -1313,7 +1341,7 @@ def run_pipeline(
         len(stocks) - len(passing),
     )
 
-    # Step 7: Sort — scored first (descending), then unscored
+    # Sort — scored first (descending), then unscored
     stocks.sort(key=lambda s: (s.score is not None, s.score or 0), reverse=True)
 
     return stocks
