@@ -13,6 +13,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Annotated
 
+from typing import Optional
+
 import typer
 import yaml
 from pydantic import ValidationError
@@ -70,6 +72,10 @@ def run(
         str,
         typer.Option("--config", help="Path to screener config YAML"),
     ] = "config/screener.yaml",
+    top_n: Annotated[
+        Optional[int],
+        typer.Option("--top-n", help="Cap the number of stocks processed after Stage 1 (e.g. 20)", min=1),
+    ] = None,
 ) -> None:
     """Screen stocks for wheel strategy suitability."""
     # If --update-symbols, validate Alpaca credentials early (hard error)
@@ -123,6 +129,7 @@ def run(
             cfg,
             on_progress=on_progress,
             option_client=broker.option_client,
+            top_n=top_n,
         )
 
     # Display results

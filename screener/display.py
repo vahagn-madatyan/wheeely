@@ -119,6 +119,13 @@ def fmt_ratio(value: float | None) -> str:
     return f"{value:.2f}"
 
 
+def fmt_signed_pct(value: float | None) -> str:
+    """Format percentage with explicit sign: +3.1%, -5.2%, or N/A."""
+    if value is None:
+        return "N/A"
+    return f"{value:+.1f}%"
+
+
 # ---------------------------------------------------------------------------
 # Score color styling
 # ---------------------------------------------------------------------------
@@ -188,6 +195,7 @@ def render_results_table(
     table.add_column("Growth", justify="right")
     table.add_column("RSI", justify="right")
     table.add_column("HV%ile", justify="right")
+    table.add_column("Perf 1M", justify="right", no_wrap=True)
     table.add_column("Yield", justify="right")
     table.add_column("Score", justify="right")
     table.add_column("Sector", max_width=20)
@@ -210,6 +218,7 @@ def render_results_table(
             fmt_pct(stock.sales_growth),
             fmt_pct(stock.rsi_14),
             hv_pct_str,
+            fmt_signed_pct(stock.perf_1m),
             yield_str,
             score_str,
             stock.sector or "N/A",

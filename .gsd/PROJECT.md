@@ -10,7 +10,7 @@ Automatically identify wheel-strategy-suitable stocks by combining fundamental h
 
 ## Current State
 
-Fully functional 4-stage screening pipeline (technicals → earnings → fundamentals → options chain) with 3 differentiated presets, HV percentile ranking, earnings proximity exclusion, options chain OI/spread validation, put premium yield display, covered call screener, and strategy integration. 345 tests passing, zero failures.
+Fully functional 4-stage screening pipeline (technicals → earnings → fundamentals → options chain) with 3 differentiated presets, HV percentile ranking, earnings proximity exclusion, options chain OI/spread validation, put premium yield display, covered call screener, strategy integration, and top-N performance cap (`--top-n` flag). "Perf 1M" column shows 1-month price performance in the results table. 368 tests passing, zero failures.
 
 Tech stack: Python 3.13, alpaca-py, finnhub-python, ta, pydantic, rich, typer, pyyaml.
 
@@ -34,4 +34,4 @@ See `.gsd/REQUIREMENTS.md` for the explicit capability contract, requirement sta
 ## Milestone Sequence
 
 - [x] M001: Screener Fix + Covered Calls — Fixed broken pipeline, added HV percentile, earnings filter, options chain validation, covered call screening
-- [ ] M002: Top-N Performance Cap — Add --top-n CLI flag to limit expensive stage processing by selecting worst monthly performers from Stage 1 survivors
+- [x] M002: Top-N Performance Cap — `--top-n` CLI flag limits expensive stage processing by selecting worst monthly performers from Stage 1 survivors; Perf 1M column in results table

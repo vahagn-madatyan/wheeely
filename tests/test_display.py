@@ -16,6 +16,7 @@ from screener.display import (
     fmt_pct,
     fmt_price,
     fmt_ratio,
+    fmt_signed_pct,
     render_results_table,
     render_stage_summary,
     render_filter_breakdown,
@@ -66,7 +67,7 @@ def _all_pass_filters() -> list[FilterResult]:
 
 
 def _capture_console() -> Console:
-    return Console(file=StringIO(), width=120)
+    return Console(file=StringIO(), width=200)
 
 
 # ===========================================================================
@@ -259,6 +260,62 @@ class TestRenderResultsTable:
         assert "GOOD" in output
         assert "BAD" not in output
         assert "NOSCORE" not in output
+
+    def test_perf_1m_column_header_present(self):
+        """Results table includes a 'Perf 1M' column header."""
+        console = _capture_console()
+        stocks = self._make_passing_stocks()
+        render_results_table(stocks, console=console)
+        output = console.file.getvalue()
+        assert "Perf 1M" in output
+
+    def test_perf_1m_positive_value_has_plus(self):
+        """Positive perf_1m renders with explicit + sign."""
+        console = _capture_console()
+        stock = _make_stock("UP", _all_pass_filters(), score=80.0, price=50.0, sector="Tech")
+        stock.perf_1m = 5.3
+        render_results_table([stock], console=console)
+        output = console.file.getvalue()
+        assert "+5.3%" in output
+
+    def test_perf_1m_negative_value(self):
+        """Negative perf_1m renders with minus sign."""
+        console = _capture_console()
+        stock = _make_stock("DOWN", _all_pass_filters(), score=70.0, price=40.0, sector="Tech")
+        stock.perf_1m = -8.7
+        render_results_table([stock], console=console)
+        output = console.file.getvalue()
+        assert "-8.7%" in output
+
+    def test_perf_1m_none_renders_na(self):
+        """Missing perf_1m renders as N/A in the table."""
+        console = _capture_console()
+        stock = _make_stock("NODATA", _all_pass_filters(), score=60.0, price=30.0, sector="Tech")
+        # perf_1m defaults to None
+        render_results_table([stock], console=console)
+        output = console.file.getvalue()
+        assert "N/A" in output
+
+
+# ===========================================================================
+# fmt_signed_pct
+# ===========================================================================
+
+
+class TestFmtSignedPct:
+    """Test signed percentage formatting."""
+
+    def test_positive(self):
+        assert fmt_signed_pct(3.14) == "+3.1%"
+
+    def test_negative(self):
+        assert fmt_signed_pct(-5.2) == "-5.2%"
+
+    def test_zero(self):
+        assert fmt_signed_pct(0.0) == "+0.0%"
+
+    def test_none(self):
+        assert fmt_signed_pct(None) == "N/A"
 
 
 # ===========================================================================

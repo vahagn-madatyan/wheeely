@@ -42,7 +42,7 @@ This milestone is complete only when all are true:
 - [x] **S01: Monthly Perf + Pipeline Cap** `risk:medium` `depends:[]`
   > After this: `run_pipeline(top_n=20)` returns results from only the 20 worst-performing Stage 1 survivors, with `perf_1m` populated on all ScreenedStock objects that have bar data.
 
-- [ ] **S02: CLI Flag + Display** `risk:low` `depends:[S01]`
+- [x] **S02: CLI Flag + Display** `risk:low` `depends:[S01]`
   > After this: User runs `run-screener --top-n 20` and sees results with a "Perf 1M" column, completing in minutes instead of hours.
 
 ## Boundary Map

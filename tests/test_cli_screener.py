@@ -127,3 +127,88 @@ def test_config_error_shows_panel(mock_load_config):
     assert "Configuration Error" in result.output
     assert "Traceback" not in result.output
     assert "config/presets/" in result.output
+
+
+# ===========================================================================
+# --top-n flag
+# ===========================================================================
+
+
+def test_help_includes_top_n():
+    """--help lists the --top-n option."""
+    result = runner.invoke(app, ["--help"])
+    assert result.exit_code == 0
+    assert "--top-n" in result.output
+
+
+@patch("scripts.run_screener.load_config")
+@patch("scripts.run_screener.render_stage_summary")
+@patch("scripts.run_screener.render_results_table")
+@patch("scripts.run_screener.progress_context")
+@patch("scripts.run_screener.run_pipeline", return_value=[])
+@patch("scripts.run_screener.FinnhubClient")
+@patch("scripts.run_screener.require_finnhub_key", return_value="fake-key")
+@patch("scripts.run_screener.create_broker_client")
+def test_top_n_forwarded_to_pipeline(
+    mock_create_broker,
+    mock_finnhub_key,
+    mock_finnhub_cls,
+    mock_pipeline,
+    mock_progress_ctx,
+    mock_results_table,
+    mock_stage_summary,
+    mock_load_config,
+):
+    """--top-n 20 forwards top_n=20 to run_pipeline."""
+    from screener.config_loader import ScreenerConfig
+
+    mock_load_config.return_value = ScreenerConfig()
+    mock_broker = MagicMock()
+    mock_create_broker.return_value = mock_broker
+    mock_progress_ctx.return_value.__enter__ = MagicMock(return_value=MagicMock())
+    mock_progress_ctx.return_value.__exit__ = MagicMock(return_value=False)
+
+    result = runner.invoke(app, ["--top-n", "20"])
+    assert result.exit_code == 0
+
+    # Verify top_n was passed through
+    call_kwargs = mock_pipeline.call_args
+    assert call_kwargs.kwargs.get("top_n") == 20 or (
+        len(call_kwargs.args) > 6 and call_kwargs.args[6] == 20
+    ), f"Expected top_n=20 in pipeline call, got: {call_kwargs}"
+
+
+@patch("scripts.run_screener.load_config")
+@patch("scripts.run_screener.render_stage_summary")
+@patch("scripts.run_screener.render_results_table")
+@patch("scripts.run_screener.progress_context")
+@patch("scripts.run_screener.run_pipeline", return_value=[])
+@patch("scripts.run_screener.FinnhubClient")
+@patch("scripts.run_screener.require_finnhub_key", return_value="fake-key")
+@patch("scripts.run_screener.create_broker_client")
+def test_no_top_n_defaults_to_none(
+    mock_create_broker,
+    mock_finnhub_key,
+    mock_finnhub_cls,
+    mock_pipeline,
+    mock_progress_ctx,
+    mock_results_table,
+    mock_stage_summary,
+    mock_load_config,
+):
+    """Omitting --top-n passes top_n=None (backward compat)."""
+    from screener.config_loader import ScreenerConfig
+
+    mock_load_config.return_value = ScreenerConfig()
+    mock_broker = MagicMock()
+    mock_create_broker.return_value = mock_broker
+    mock_progress_ctx.return_value.__enter__ = MagicMock(return_value=MagicMock())
+    mock_progress_ctx.return_value.__exit__ = MagicMock(return_value=False)
+
+    result = runner.invoke(app, [])
+    assert result.exit_code == 0
+
+    call_kwargs = mock_pipeline.call_args
+    assert call_kwargs.kwargs.get("top_n") is None, (
+        f"Expected top_n=None when flag omitted, got: {call_kwargs.kwargs}"
+    )
