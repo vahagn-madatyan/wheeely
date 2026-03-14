@@ -1,19 +1,25 @@
-# Premium Data Expansion Plan
+# Premium Expansion Plan
 
-Two premium data services to replace free-tier approximations with institutional-grade data.
+Full SaaS expansion of wheeely — BYOK premium data, cloud-hosted auto-trading, AI inference, and web dashboard built on top of the existing CLI.
 
-| Service | Cost | Role |
-|---------|------|------|
-| **FMP** (Financial Modeling Prep) | $99/mo | Fundamentals, screening, earnings — replaces Finnhub entirely |
-| **ORATS** | $99/mo | Options analytics — IV rank, fair value, skew, greeks |
+**Business model:** Users bring their own API keys (BYOK) at every tier. The platform monetizes through features (auto-trading, AI analysis), not bundled data access.
 
-Total: $198/mo. Each is independently useful and gated on its own API key.
+| Service | User cost | Role | Tier |
+|---------|-----------|------|------|
+| **Finnhub** | Free | Fundamentals, earnings — current pipeline | Free (BYOK) |
+| **Alpaca** | Free | Brokerage, options data, execution | Free (BYOK) |
+| **FMP** (Financial Modeling Prep) | ~$99/mo | Server-side screening, clean fundamentals, bulk earnings — upgrades over Finnhub | Premium (BYOK) |
+| **ORATS** | ~$99/mo | IV rank, fair value, skew, greeks — upgrades over HV percentile proxy | Premium (BYOK) |
+
+Each data source is gated on the user's own API key. Platform infra costs are independent of data provider costs.
+
+**CLI stays untouched.** `run-strategy`, `run-screener`, `run-call-screener` continue to work exactly as-is. The SaaS platform is a new layer built alongside the CLI, not a replacement.
 
 ---
 
 ## FMP — Fundamentals & Screening ($99/mo)
 
-Replaces Finnhub free tier. Eliminates the biggest bottleneck in the pipeline: per-symbol fundamentals calls at 1.1s/symbol.
+Premium upgrade over Finnhub. When a user brings an FMP key, unlocks server-side screening and clean fundamentals — the biggest pipeline improvement available. Finnhub path remains permanently as the free-tier pipeline.
 
 ### Current Finnhub problems being solved
 
@@ -135,9 +141,9 @@ Replace binary earnings exclusion with move-size-aware filtering.
 
 ORATS `/cores` includes `nextErn`, `daysToNextErn`, `lastErn` + 12 quarters of dates/moves.
 
-- **Eliminates:** `finnhub_client.py` earnings calendar calls (one per symbol, rate-limited at ~1.1s each)
-- **Benefit:** One fewer API dependency, faster pipeline (earnings data bundled into the `/cores` call already needed for P2/P4)
-- **Migration:** Remove `run_stage_1b_earnings()` Finnhub path; consume earnings data from ORATS cores response
+- **Bypasses:** `finnhub_client.py` earnings calendar calls for users with ORATS keys (one per symbol, rate-limited at ~1.1s each)
+- **Benefit:** Faster pipeline for premium users (earnings data bundled into the `/cores` call already needed for O2/O4)
+- **Migration:** When ORATS key present, skip `run_stage_1b_earnings()` Finnhub path; consume earnings data from ORATS cores response. Finnhub path remains for users without ORATS.
 
 ### O6 — Skew Awareness
 
@@ -209,25 +215,27 @@ Eliminates Finnhub entirely. Screener runs in seconds instead of minutes.
 | `/strikes` (per symbol) | 20 | One per top-N symbol |
 | **Total** | ~22 | Well within 20k/month budget |
 
-### Backward compatibility
+### Data routing by keys present (BYOK)
 
-Three tiers based on which keys are present:
+Pipeline adapts based on which API keys the user has connected:
 
-| Keys present | Behavior |
-|---|---|
-| Neither | Current behavior: Finnhub fundamentals, HV%ile proxy, Alpaca options |
-| FMP only | FMP replaces Finnhub for fundamentals/earnings/screening. HV%ile proxy remains. Alpaca options unchanged |
-| FMP + ORATS | Full premium pipeline. Finnhub eliminated. IV rank, fair value edge, graduated earnings, skew |
-| ORATS only | ORATS replaces HV%ile and enhances options selection. Finnhub still used for fundamentals |
+| Keys present | Behavior | Tier |
+|---|---|---|
+| Finnhub + Alpaca | Current pipeline: Finnhub fundamentals, HV%ile proxy, Alpaca options | Free |
+| + FMP | FMP replaces Finnhub for this user's runs. HV%ile proxy remains. Alpaca options unchanged | Premium |
+| + ORATS | ORATS replaces HV%ile, adds fair value edge, graduated earnings, skew. Finnhub still used for fundamentals | Premium |
+| + FMP + ORATS | Full premium pipeline for this user. Fastest, most accurate screening | Premium |
 
-### Finnhub removal
+Key principle: each user's pipeline is configured by their own connected keys. Platform never shares API keys across users.
 
-Once FMP is integrated and verified:
-1. `finnhub_client.py` becomes dead code
-2. `METRIC_FALLBACK_CHAINS` eliminated
-3. D/E normalization hack (D027) eliminated
-4. `FINNHUB_API_KEY` no longer required
-5. `finnhub-python` removed from dependencies
+### Finnhub coexistence
+
+Finnhub is NOT removed — it remains the free-tier data source permanently:
+- Free users: Finnhub + Alpaca (BYOK) — current pipeline, unchanged
+- Premium users with FMP key: FMP replaces Finnhub in their pipeline — faster, cleaner data
+- The pipeline detects which keys are present and routes accordingly
+- `finnhub_client.py`, `METRIC_FALLBACK_CHAINS`, D/E normalization — all stay for free-tier users
+- No dependency removal — `finnhub-python` stays in `pyproject.toml`
 
 ### Implementation order
 
@@ -370,7 +378,8 @@ Next.js calls FastAPI over Render's private network — zero public internet hop
 │  ┌──────────────▼─────────────────────────────────────────────┐  │
 │  │  Background Worker 1: Celery (screening + execution queue) │  │
 │  │  ├── Screening pipeline (FMP → ORATS → Alpaca)             │  │
-│  │  ├── Trade execution tasks                                 │  │
+│  │  ├── Manual trade execution tasks                          │  │
+│  │  ├── Auto-trading sweep (per-user wheel strategy runs)     │  │
 │  │  ├── CELERY_TASK_TIME_LIMIT = 120                          │  │
 │  │  └── CELERY_TASK_ACKS_LATE = True (retry on crash)         │  │
 │  └────────────────────────────────────────────────────────────┘  │
@@ -404,10 +413,10 @@ Next.js calls FastAPI over Render's private network — zero public internet hop
 │                                                                  │
 │  ┌────────────────────────────────────────────────────────────┐  │
 │  │  Cron Jobs (Render-native, no Celery Beat needed)          │  │
-│  │  ├── Morning market brief: 8:30 AM ET weekdays             │  │
+│  │  ├── Auto-trading sweep: every 30 min during market hours  │  │
+│  │  ├── Morning market brief: 8:30 AM ET weekdays (premium)   │  │
 │  │  ├── Position sync: every 30 min during market hours       │  │
-│  │  ├── Stale API key check: daily 6 AM ET                    │  │
-│  │  └── FMP/ORATS cache warm: 9:00 AM ET weekdays             │  │
+│  │  └── Stale API key check: daily 6 AM ET                    │  │
 │  └────────────────────────────────────────────────────────────┘  │
 └──────────────────────────────────────────────────────────────────┘
          │
@@ -634,6 +643,57 @@ CREATE TABLE public.wheel_positions (
 );
 
 -- ================================================================
+-- AUTO-TRADING (cloud wheel — premium only)
+-- ================================================================
+
+-- Per-user auto-trading configuration
+CREATE TABLE public.auto_trading_configs (
+    id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id         UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE UNIQUE,
+    enabled         BOOLEAN NOT NULL DEFAULT FALSE,
+    paused          BOOLEAN NOT NULL DEFAULT FALSE,  -- kill switch
+    mode            TEXT NOT NULL DEFAULT 'paper' CHECK (mode IN ('paper', 'live')),
+    symbols         JSONB NOT NULL DEFAULT '[]',     -- symbol list for wheel strategy
+    -- Risk limits
+    max_positions   INTEGER DEFAULT 5,
+    max_risk_per_position NUMERIC,                   -- max $ at risk per put sold
+    max_total_risk  NUMERIC,                         -- max $ total portfolio risk
+    -- Schedule
+    run_frequency   TEXT DEFAULT 'market_hours' CHECK (run_frequency IN ('market_hours', 'daily_open', 'manual')),
+    -- Strategy params (overrides defaults if set)
+    delta_min       NUMERIC,
+    delta_max       NUMERIC,
+    dte_min         INTEGER,
+    dte_max         INTEGER,
+    -- State
+    last_run_at     TIMESTAMPTZ,
+    last_run_status TEXT CHECK (last_run_status IN ('success', 'partial', 'error', 'skipped')),
+    last_error      TEXT,
+    created_at      TIMESTAMPTZ DEFAULT now(),
+    updated_at      TIMESTAMPTZ DEFAULT now()
+);
+
+-- Auto-trading run log (audit trail)
+CREATE TABLE public.auto_trading_runs (
+    id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id         UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    status          TEXT NOT NULL CHECK (status IN ('running', 'success', 'partial', 'error', 'skipped')),
+    started_at      TIMESTAMPTZ DEFAULT now(),
+    completed_at    TIMESTAMPTZ,
+    -- What happened
+    positions_checked INTEGER DEFAULT 0,
+    puts_sold       INTEGER DEFAULT 0,
+    calls_sold      INTEGER DEFAULT 0,
+    assignments_detected INTEGER DEFAULT 0,
+    orders_placed   JSONB DEFAULT '[]',          -- [{symbol, side, order_id, strike, premium}]
+    errors          JSONB DEFAULT '[]',          -- [{symbol, error, phase}]
+    -- Context
+    buying_power    NUMERIC,
+    total_risk      NUMERIC,
+    summary         TEXT                         -- human-readable summary of what the run did
+);
+
+-- ================================================================
 -- BILLING
 -- ================================================================
 
@@ -667,6 +727,8 @@ ALTER TABLE public.screening_results ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.trades ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.wheel_positions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.usage_records ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.auto_trading_configs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.auto_trading_runs ENABLE ROW LEVEL SECURITY;
 
 -- Users can only see/modify their own data
 CREATE POLICY "Users own their profile"
@@ -696,6 +758,12 @@ CREATE POLICY "Users own their positions"
 CREATE POLICY "Users own their usage"
     ON public.usage_records FOR ALL USING (auth.uid() = user_id);
 
+CREATE POLICY "Users own their auto-trading config"
+    ON public.auto_trading_configs FOR ALL USING (auth.uid() = user_id);
+
+CREATE POLICY "Users own their auto-trading runs"
+    ON public.auto_trading_runs FOR ALL USING (auth.uid() = user_id);
+
 -- ================================================================
 -- INDEXES
 -- ================================================================
@@ -707,6 +775,7 @@ CREATE INDEX idx_screening_results_run ON public.screening_results (run_id);
 CREATE INDEX idx_screening_results_user_symbol ON public.screening_results (user_id, symbol);
 CREATE INDEX idx_wheel_positions_user ON public.wheel_positions (user_id, underlying);
 CREATE INDEX idx_usage_user_date ON public.usage_records (user_id, created_at DESC);
+CREATE INDEX idx_auto_trading_runs_user ON public.auto_trading_runs (user_id, started_at DESC);
 ```
 
 ### Secret Management — Supabase Vault + Envelope Encryption
@@ -847,16 +916,18 @@ LLM responses cached in Redis with TTL:
 
 | Feature | Free | Premium ($29/mo) |
 |---------|------|-------------------|
+| **Data sources** | Finnhub + Alpaca (BYOK) | FMP + ORATS (BYOK) — upgrades Finnhub pipeline |
 | Put screener | ✅ 3 runs/day | ✅ Unlimited |
 | Call screener | ✅ 3 runs/day | ✅ Unlimited |
-| Execute trades | ✅ Paper only | ✅ Paper + Live |
+| Manual trade execution | ✅ Paper only | ✅ Paper + Live (select and confirm) |
+| **Auto-trading (cloud wheel)** | ❌ | ✅ Cloud-hosted `run-strategy` on schedule |
 | Watchlists | 1 (10 symbols) | Unlimited |
 | Screener presets | Default only | Custom presets |
 | LLM analysis | ❌ | ✅ All agents |
 | Screening history | 7 days | Unlimited |
 | Trade journal | ❌ | ✅ With AI reasoning |
-| ORATS data | ❌ (HV proxy) | ✅ Real IV rank, fair value |
-| FMP data | ❌ (Finnhub) | ✅ Server-side screening |
+| Notifications | ❌ | ✅ Fills, assignments, errors |
+| **CLI** | Unchanged, standalone | Unchanged, standalone |
 
 #### Implementation
 
@@ -897,12 +968,21 @@ GET    /api/screen/presets       List available presets
 POST   /api/screen/full          Run full pipeline (async)
 WS     /api/screen/ws/{run_id}   WebSocket for live screening progress
 
-Strategy Execution
+Strategy Execution (manual — premium)
 ──────────────────────────────────────────────────
 GET    /api/positions            Current positions + wheel state (from user's Alpaca)
 POST   /api/execute/sell-puts    Sell selected put contracts (requires confirmation token)
 POST   /api/execute/sell-calls   Sell selected call contracts (requires confirmation token)
 GET    /api/account              Account info, buying power, risk
+
+Auto-Trading (cloud wheel — premium)
+──────────────────────────────────────────────────
+GET    /api/auto/status          Auto-trading status (enabled, last run, next run, errors)
+POST   /api/auto/enable          Enable auto-trading (sets schedule, symbol list, risk limits)
+POST   /api/auto/disable         Disable auto-trading (kill switch — immediate)
+PATCH  /api/auto/config          Update auto-trading config (symbols, risk limits, DTE prefs)
+GET    /api/auto/history         Auto-trading run history (what it did and why)
+GET    /api/auto/history/{id}    Single run detail (positions checked, orders placed, errors)
 
 LLM Agents
 ──────────────────────────────────────────────────
@@ -932,13 +1012,24 @@ GET    /api/chain/{symbol}       Option chain with greeks
 
 #### Key design decisions (updated)
 
-- **No auto-execute** — GUI shows screener matches, user selects and confirms. Execution endpoints require a confirmation token (generated client-side after user reviews the order summary).
-- **Per-user Alpaca credentials** — every Alpaca API call uses the requesting user's keys, decrypted from Vault (envelope + pgsodium) for the duration of the call. No shared brokerage account. Consider Alpaca OAuth as primary auth path (scoped permissions, revocable) with raw API keys as fallback.
+- **Two execution modes:**
+  - **Free tier — screener only.** GUI shows screener results. No execution. Users take signals to their own brokerage manually.
+  - **Premium tier — manual + auto-trading.** Manual: user selects contracts from screener results, reviews order summary, confirms. Auto: cloud-hosted wheel strategy runs on a schedule per user (same logic as CLI `run-strategy`), with dashboard controls (enable/disable, pause, symbol list, risk limits) and notifications (fills, assignments, errors, kill switch).
+- **Auto-trading architecture:**
+  - Celery Beat (or Render cron) triggers a sweep job during market hours
+  - Sweep iterates over premium users with auto-trading enabled
+  - Per-user: decrypt keys → check positions → run wheel logic → place orders
+  - Results logged to `trades` table, notifications sent
+  - Kill switch: user can pause auto-trading instantly from dashboard (flag in `profiles`)
+  - Safety: per-user risk limits enforced, max positions, max capital at risk
+  - All orders auditable — every automated trade recorded with full context
+- **Per-user Alpaca credentials** — every Alpaca API call uses the requesting user's keys, decrypted from Vault for the duration of the call. No shared brokerage account. Consider Alpaca OAuth as primary auth path (scoped permissions, revocable) with raw API keys as fallback.
+- **BYOK data sources** — FMP/ORATS keys are the user's own. Platform never absorbs data provider costs. Pipeline adapts to whichever keys the user has connected.
 - **Tier enforcement in middleware** — FastAPI dependency checks `user.tier` before premium endpoints. Returns 403 with upgrade prompt.
 - **Screening is async** — Celery task on `screening` queue, results stored in `screening_runs` + `screening_results`. Client polls or connects via WebSocket.
 - **LLM calls are async** — Celery tasks on `llm` queue with Redis caching. Results stored in DB for re-display. Isolated from screening — separate worker.
 - **Stateless backend** — all persistent state in Supabase Postgres. Redis for ephemeral state only. Render services can be restarted/scaled freely.
-- **Per-user rate limiting** — Redis sliding window counters. Screening: 60/hour premium, 3/day free. Execution: 10/min. LLM: 30/hour. Prevents single user from burning API budgets.
+- **Per-user rate limiting** — Redis sliding window counters. Screening: 60/hour premium, 3/day free. Execution: 10/min. LLM: 30/hour.
 
 ### Frontend — Next.js on Render
 
@@ -952,6 +1043,7 @@ GET    /api/chain/{symbol}       Option chain with greeks
 - Current wheel state: position table (short_put → long_shares → short_call), P&L, days held
 - Account summary: buying power, total risk, available capital
 - AI market brief (premium): today's opportunities from watchlist
+- Auto-trading panel (premium): enabled/disabled toggle, last run status, next scheduled run, recent activity feed, kill switch button
 - Quick actions: "Run Put Screener", "Run Call Screener"
 
 **Put Screener**
@@ -980,9 +1072,10 @@ GET    /api/chain/{symbol}       Option chain with greeks
 - Export to CSV
 
 **Settings**
-- API keys: connect Alpaca (paper/live toggle), FMP, ORATS — status indicators
+- API keys: connect Alpaca (paper/live toggle), FMP, ORATS — status indicators (BYOK for all)
 - Screener presets: create/edit/delete
 - Risk limits: max risk per position, max total risk, max positions
+- Auto-trading config (premium): symbol list, schedule preferences, risk limits, paper/live mode, enable/disable
 - Notification preferences (future: email/SMS on assignment, expiry)
 
 **Billing**
@@ -1164,6 +1257,10 @@ services:
 
 # --- Cron Jobs ---
 cronJobs:
+  - name: auto-trading-sweep
+    schedule: "*/30 13-20 * * 1-5"  # every 30 min during market hours (UTC)
+    command: python -m tasks.cron.auto_trading_sweep
+    rootDir: apps/api
   - name: morning-brief
     schedule: "30 13 * * 1-5"    # 8:30 AM ET weekdays (UTC)
     command: python -m tasks.cron.morning_brief
@@ -1171,10 +1268,6 @@ cronJobs:
   - name: position-sync
     schedule: "*/30 13-20 * * 1-5"  # every 30 min during market hours (UTC)
     command: python -m tasks.cron.position_sync
-    rootDir: apps/api
-  - name: cache-warm
-    schedule: "0 14 * * 1-5"     # 9:00 AM ET weekdays (UTC)
-    command: python -m tasks.cron.cache_warm
     rootDir: apps/api
   - name: stale-key-check
     schedule: "0 11 * * *"       # 6:00 AM ET daily (UTC)
@@ -1195,28 +1288,30 @@ cronJobs:
 
 **Note on Render Starter tier:** 512MB RAM per service. Monitor memory usage on the screening worker — screening pipelines with pandas DataFrames + ORATS data can spike. Upgrade to Standard ($25/mo) if OOM kills occur.
 
-**Costs at launch:**
+**Platform costs at launch (BYOK model — data provider costs are user's, not ours):**
 
 | Service | Cost |
 |---------|------|
 | Render (web ×2 + worker ×2 + redis) | ~$38/mo |
 | Supabase (free tier: 500MB, 50k MAU) | $0 |
 | Stripe | 2.9% + 30¢ per transaction |
-| FMP | $99/mo |
-| ORATS | $99/mo |
-| LLM API costs (OpenAI/Anthropic) | ~$20-50/mo depending on usage |
-| **Total** | ~$260-290/mo |
+| LLM API costs (OpenAI/Anthropic) — our cost for premium AI features | ~$20-50/mo depending on usage |
+| **Total platform cost** | ~$58-88/mo |
 
-**Breakeven:** ~10 premium subscribers at $29/mo covers infrastructure. FMP/ORATS API response caching (Redis TTLs above) is critical — without it, ORATS 20K/month budget is exhausted around 15-20 active users. With caching, extends to ~80-100 active users before needing a plan upgrade.
+FMP (~$99/mo) and ORATS (~$99/mo) are user expenses, not platform costs. Users bring their own keys.
 
-### Migration path from CLI
+**Breakeven:** ~3 premium subscribers at $29/mo covers infrastructure. LLM costs scale with premium user count but are bounded by per-user rate limits (30 LLM calls/hour). At 50 premium users, LLM costs may reach ~$100-200/mo — still covered by subscription revenue ($1,450/mo).
 
-CLI tools (`run-strategy`, `run-screener`, `run-call-screener`) remain functional for personal use:
+### CLI preservation
 
-1. FastAPI wraps the same `screen_calls()`, `screen_puts()`, `run_pipeline()` functions
-2. CLI reads `config/symbol_list.txt` + `.env` for local use
-3. SaaS users' configs/watchlists live in Supabase, API keys in Vault
-4. Same screening and strategy engine — two interfaces
+**The CLI is not migrated, wrapped, or modified.** It continues to work exactly as today:
+
+- `run-strategy`, `run-screener`, `run-call-screener` — same entry points, same behavior
+- Reads `config/symbol_list.txt` + `.env` for credentials
+- No Supabase, no web dependencies, no auth layer
+- If the folder restructure happens (e.g., `cli/` + `web/`), CLI code moves but imports and behavior stay identical
+- CLI and SaaS share the same screening/strategy engine code (imported, not copied)
+- SaaS users' configs/watchlists live in Supabase, API keys in Vault — CLI uses local `.env`
 
 ### Implementation phases (revised for Render)
 
@@ -1249,7 +1344,17 @@ CLI tools (`run-strategy`, `run-screener`, `run-call-screener`) remain functiona
 - Per-user rate limiting (Redis sliding windows)
 - Billing page in frontend
 
-**Phase 5 — LLM integration**
+**Phase 5 — Auto-trading (cloud wheel)**
+- Celery Beat or Render cron for market-hours sweep
+- Per-user auto-trading config (symbols, risk limits, schedule, paper/live)
+- Sweep job: iterate premium users with auto-trading enabled → decrypt keys → run wheel logic → place orders
+- Kill switch (instant disable from dashboard)
+- Per-user risk limits enforced in sweep (max positions, max capital at risk, max per-position size)
+- Auto-trading run history + audit trail (every order recorded with full context)
+- Notifications: fills, assignments, errors, approaching risk limits
+- Dashboard auto-trading panel (status, activity feed, controls)
+
+**Phase 6 — LLM integration**
 - LiteLLM config + model routing
 - Celery tasks on dedicated `llm` queue (Worker 2)
 - Screening analysis agent
@@ -1257,7 +1362,7 @@ CLI tools (`run-strategy`, `run-screener`, `run-call-screener`) remain functiona
 - Redis caching for LLM responses
 - Regulatory language guardrails in all agent system prompts
 
-**Phase 6 — Full features**
+**Phase 7 — Full features**
 - Watchlist manager
 - Trade journal with AI reasoning
 - P&L charts
@@ -1265,7 +1370,7 @@ CLI tools (`run-strategy`, `run-screener`, `run-call-screener`) remain functiona
 - Portfolio risk metrics agent (reports data, no recommendations)
 - Market context brief (Render cron job, reports activity, no recommendations)
 
-**Phase 7 — Caching + Scale**
+**Phase 8 — Caching + Scale**
 - FMP/ORATS Redis response caching with TTLs
 - Cache warming cron job (pre-market)
 - Monitor Render Starter memory usage, upgrade workers if needed
@@ -1275,14 +1380,16 @@ CLI tools (`run-strategy`, `run-screener`, `run-call-screener`) remain functiona
 - Monitoring + alerting (Sentry, Render metrics)
 - Load testing + horizontal scaling plan
 
-**Phase 8 — Scale triggers**
+**Phase 9 — Scale triggers**
 
 When to upgrade from launch architecture:
 
 | Trigger | Action |
 |---------|--------|
 | Worker OOM kills | Upgrade Render Starter → Standard ($25/mo per service) |
-| ORATS 20K/month approaching | Upgrade ORATS plan or add user-provided keys |
 | >50 concurrent screening runs | Add Worker 3 (second screening worker) |
 | >100 active users | Supabase free → Pro ($25/mo), add connection pooling |
+| >50 auto-trading users | Sweep job may need parallelization or staggered scheduling |
 | Need compliance audit trail | Migrate Vault to AWS Secrets Manager |
+
+Note: ORATS/FMP budget limits are per-user (BYOK). If a user approaches their own ORATS 20K/month limit, that's their concern — we surface a "approaching API limit" warning in the dashboard based on their usage tracking.
