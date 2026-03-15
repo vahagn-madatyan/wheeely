@@ -62,7 +62,7 @@ This milestone is complete only when all are true:
 - [x] **S03: Legacy Code Removal + Docs Update** `risk:low` `depends:[S02]`
   > After this: `core/strategy.py`, the `sell_puts()` and `sell_calls()` functions in `core/execution.py`, `models/contract.py`, and obsolete constants in `config/params.py` are deleted. `core/execution.py` is either empty (deleted) or contains only non-dead code. `CLAUDE.md` and `README.md` reflect the new architecture. All 368+ existing tests still pass.
 
-- [ ] **S04: End-to-End Strategy Verification** `risk:low` `depends:[S03]`
+- [x] **S04: End-to-End Strategy Verification** `risk:low` `depends:[S03]`
   > After this: `run-strategy` exercises the complete wheel cycle — detecting positions via `update_state()`, selling covered calls via `screen_calls()` for `long_shares`, and selling cash-secured puts via `screen_puts()` for allowed symbols — with all legacy code removed. Verified by running `run-strategy --help` to confirm CLI works, examining strategy integration tests, and confirming all tests pass with zero imports from deleted modules.
 
 ## Boundary Map

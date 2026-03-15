@@ -18,7 +18,7 @@
 
 ## Tasks
 
-- [ ] **T01: Final integration sweep and test confirmation** `est:30m`
+- [x] **T01: Final integration sweep and test confirmation** `est:30m`
   - Why: Ensures the complete wheel strategy works after all changes — the proof that M003 delivered
   - Files: `tests/test_cli_strategy.py`, any remaining fixups
   - Do: Run full test suite. Search for any remaining references to deleted modules. Verify `run-strategy --help` works. Review `test_cli_strategy.py` to confirm both call and put screener paths are tested. If any test imports deleted modules, fix or remove them. Confirm `pyproject.toml` has `run-put-screener` entry point. Run `rg` checks for dead references. Write milestone summary notes.
