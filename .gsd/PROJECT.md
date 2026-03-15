@@ -35,3 +35,4 @@ See `.gsd/REQUIREMENTS.md` for the explicit capability contract, requirement sta
 
 - [x] M001: Screener Fix + Covered Calls — Fixed broken pipeline, added HV percentile, earnings filter, options chain validation, covered call screening
 - [x] M002: Top-N Performance Cap — `--top-n` CLI flag limits expensive stage processing by selecting worst monthly performers from Stage 1 survivors; Perf 1M column in results table
+- [ ] M003: Execution Cleanup — Unify put and call screening to symmetric `screen_puts()`/`screen_calls()` pattern with spread filter, annualized return scoring, DTE minimum 7 days; remove dead code
