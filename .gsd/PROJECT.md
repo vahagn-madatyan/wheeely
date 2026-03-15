@@ -1,31 +1,36 @@
-# Wheeely Stock Screener
+# Wheeely
 
 ## What This Is
 
-A stock screening module for the Wheeely options wheel strategy bot. Screens stocks using Finnhub fundamental data (market cap, debt/equity, margins, sales growth) and Alpaca market data (price, volume, RSI, SMA200, options availability), then scores and ranks candidates for wheel suitability. Results display as a Rich table with color-coded scores, filter elimination summaries, and progress indicators. Users configure screening via YAML presets (conservative/moderate/aggressive) with custom overrides. Integrates as standalone `run-screener` CLI, `run-strategy --screen` flag, and `run-call-screener` for covered calls.
+An options wheel strategy platform. Started as a CLI bot that screens stocks and sells cash-secured puts / covered calls via the Alpaca Trading API. Now expanding into a multi-tenant SaaS where traders sign up, connect their own API keys (BYOK), and run screeners from a browser — free tier matches CLI capabilities, premium tier adds additional data providers (FMP, ORATS), cloud auto-trading, and LLM analysis.
+
+The CLI remains standalone and untouched. Premium features live in a separate `/premium` directory following the GitLab open-core model (free + paid tiers, same codebase).
 
 ## Core Value
 
-Automatically identify wheel-strategy-suitable stocks by combining fundamental health checks with technical screening, replacing manual symbol selection with data-driven filtering.
+Data-driven options wheel stock screening — replacing manual symbol selection with automated fundamental + technical + options chain filtering, configurable via presets, accessible via CLI or web.
 
 ## Current State
 
-Fully functional 4-stage screening pipeline (technicals → earnings → fundamentals → options chain) with 3 differentiated presets, HV percentile ranking, earnings proximity exclusion, options chain OI/spread validation, put premium yield display, covered call screener, strategy integration, and top-N performance cap (`--top-n` flag). "Perf 1M" column shows 1-month price performance in the results table. 368 tests passing, zero failures.
+**CLI (complete):** Fully functional 4-stage screening pipeline (technicals → earnings → fundamentals → options chain) with 3 presets, HV percentile, earnings proximity exclusion, put + call screeners, strategy bot integration, and top-N performance cap. 425 tests passing, zero failures.
 
-Tech stack: Python 3.13, alpaca-py, finnhub-python, ta, pydantic, rich, typer, pyyaml.
+**Web (M004 — in progress):** Building the free-tier online experience — FastAPI wrapping the existing engine, Supabase auth + encrypted key storage, Next.js dashboard with screener UI and positions view.
+
+Tech stack:
+- CLI: Python 3.13, alpaca-py, finnhub-python, ta, pydantic, rich, typer, pyyaml
+- Web: FastAPI, Next.js 15, Supabase, Redis, Render
 
 ## Architecture / Key Patterns
 
-- **Entry point:** `scripts/run_strategy.py:main()` — registered as `run-strategy` console script
-- **Screener entry:** `scripts/run_screener.py:main()` — registered as `run-screener` console script
-- **Call screener:** `scripts/run_call_screener.py:main()` — registered as `run-call-screener` console script
-- **Pipeline:** `screener/pipeline.py:run_pipeline()` — 4-stage orchestrator (universe → bars → Stage 1 → Stage 1b → Stage 2 → Stage 3 → score → sort)
-- **Filters:** Pure functions taking `ScreenedStock` + config → `FilterResult`, never raise
+- **CLI entry points:** `run-strategy`, `run-screener`, `run-call-screener`, `run-put-screener` — registered in `pyproject.toml`
+- **Pipeline:** `screener/pipeline.py:run_pipeline()` — 4-stage orchestrator with pure filter functions
+- **Screeners:** Symmetric `screen_puts()` / `screen_calls()` with preset-configurable thresholds
 - **Config:** YAML presets + Pydantic validation via `screener/config_loader.py`
-- **Display:** Rich tables with Console injection for testability via `screener/display.py`
-- **Data:** `screener/finnhub_client.py` (rate-limited Finnhub) + `screener/market_data.py` (Alpaca bars)
-- **Models:** `models/screened_stock.py` — progressive dataclass populated through pipeline stages
+- **Display:** Rich tables with Console injection for testability
+- **Data:** `screener/finnhub_client.py` (rate-limited) + `screener/market_data.py` (Alpaca bars)
 - **Logging shadow:** Project's `logging/` package shadows stdlib; all modules use `import logging as stdlib_logging`
+- **BYOK model:** All API keys are user-owned. Platform never absorbs data provider costs.
+- **Open-core licensing:** Free tier = Finnhub + Alpaca (CLI-equivalent online). Premium adds FMP, ORATS, auto-trading, LLM — additive, never replaces free-tier providers.
 
 ## Capability Contract
 
@@ -34,5 +39,6 @@ See `.gsd/REQUIREMENTS.md` for the explicit capability contract, requirement sta
 ## Milestone Sequence
 
 - [x] M001: Screener Fix + Covered Calls — Fixed broken pipeline, added HV percentile, earnings filter, options chain validation, covered call screening
-- [x] M002: Top-N Performance Cap — `--top-n` CLI flag limits expensive stage processing by selecting worst monthly performers from Stage 1 survivors; Perf 1M column in results table
-- [ ] M003: Execution Cleanup — Unify put and call screening to symmetric `screen_puts()`/`screen_calls()` pattern with spread filter, annualized return scoring, DTE minimum 7 days; remove dead code
+- [x] M002: Top-N Performance Cap — `--top-n` CLI flag limits expensive stage processing by selecting worst monthly performers
+- [x] M003: Modern Put Screener + Legacy Cleanup — Symmetric `screen_puts()`, `run-put-screener` CLI, removed legacy code, 425 tests
+- [ ] M004: Free Tier Online — Multi-tenant SaaS: FastAPI + Supabase + Next.js, BYOK key storage, screener UI, positions dashboard, deployed on Render
