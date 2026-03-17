@@ -1,7 +1,7 @@
 # GSD State
 
 **Active Milestone:** M004: Free Tier Online
-**Active Slice:** S01: FastAPI wraps existing screener engine
+**Active Slice:** S02: Supabase auth + database + encrypted key storage
 **Phase:** executing
 **Requirements Status:** 14 active · 31 validated · 8 deferred · 3 out of scope
 
@@ -12,10 +12,11 @@
 - 🔄 **M004:** Free Tier Online
 
 ## Recent Decisions
-- None recorded
+- D059: asyncpg for async Supabase Postgres access
+- D060: HS256 JWT verification with SUPABASE_JWT_SECRET
 
 ## Blockers
 - None
 
 ## Next Action
-Execute T01 of slice S01 (bring API code from branch and install dependencies).
+Execute S02/T01 (Build envelope encryption service with tests).
