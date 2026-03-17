@@ -14,7 +14,7 @@ Data-driven options wheel stock screening — replacing manual symbol selection 
 
 **CLI (complete):** Fully functional 4-stage screening pipeline (technicals → earnings → fundamentals → options chain) with 3 presets, HV percentile, earnings proximity exclusion, put + call screeners, strategy bot integration, and top-N performance cap. 425 tests passing, zero failures.
 
-**Web (M004 — in progress):** Building the free-tier online experience — FastAPI wrapping the existing engine, Supabase auth + encrypted key storage, Next.js dashboard with screener UI and positions view.
+**Web (M004 — in progress):** Building the free-tier online experience. S01 complete — FastAPI wraps the existing screening engine with 5 endpoints, per-request Alpaca client construction, and async background task execution (31 API tests passing). Next: Supabase auth + encrypted key storage (S02), then frontend (S03-S06), then deployment (S07).
 
 Tech stack:
 - CLI: Python 3.13, alpaca-py, finnhub-python, ta, pydantic, rich, typer, pyyaml

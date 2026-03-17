@@ -134,13 +134,13 @@
 
 ### CLI-COMPAT-01 — CLI continues to work exactly as before with zero changes
 - Class: constraint
-- Status: active
+- Status: validated
 - Description: All console scripts (run-strategy, run-screener, run-call-screener, run-put-screener) work unchanged. 425 tests pass. No import path changes. No new dependencies required for CLI operation.
 - Why it matters: CLI is the proven, working product — web is additive, not a migration
 - Source: user
 - Primary owning slice: M004/S01
 - Supporting slices: none
-- Validation: unmapped
+- Validation: 425 CLI tests pass unchanged after adding apps/api/. Zero files outside apps/api/ modified.
 
 ## Validated
 
@@ -488,10 +488,10 @@
 | WEB-08 | primary-user-loop | active | M004/S06 | M004/S01 | unmapped |
 | WEB-09 | constraint | active | M004/S06 | none | unmapped |
 | WEB-10 | compliance/security | active | M004/S02 | none | unmapped |
-| WEB-11 | core-capability | active | M004/S01 | M004/S05 | unmapped |
+| WEB-11 | core-capability | validated | M004/S01 | M004/S05 | 31 API tests |
 | WEB-12 | operability | active | M004/S07 | none | unmapped |
 | WEB-13 | primary-user-loop | active | M004/S04 | none | unmapped |
-| CLI-COMPAT-01 | constraint | active | M004/S01 | none | unmapped |
+| CLI-COMPAT-01 | constraint | validated | M004/S01 | none | 425 CLI tests pass |
 | PREM-01 | core-capability | deferred | none | none | unmapped |
 | PREM-02 | differentiator | deferred | none | none | unmapped |
 | PREM-03 | differentiator | deferred | none | none | unmapped |
@@ -508,6 +508,11 @@
 
 - Active requirements: 14
 - Mapped to slices: 14
+- Validated (prior milestones): 30
+- Deferred: 8
+- Out of scope: 3
+- Unmapped active requirements: 0
+14
 - Validated (prior milestones): 30
 - Deferred: 8
 - Out of scope: 3
