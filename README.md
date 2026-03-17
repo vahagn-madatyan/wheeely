@@ -53,9 +53,34 @@ Find wheel-suitable stocks using Finnhub fundamentals and Alpaca technicals:
 run-screener                          # default (moderate) preset
 run-screener --preset conservative    # large-cap, low debt
 run-screener --preset aggressive      # small-cap OK
+run-screener --top-n 20               # only screen the top 20 worst performers
 run-screener --verbose                # show per-filter breakdown
 run-screener --update-symbols         # export results to symbol_list.txt
 ```
+
+### Recommended Commands
+
+```bash
+# Best for free-tier API accounts (Alpaca + Finnhub)
+run-screener --preset moderate --top-n 15
+
+# Full scan if you have paid API access
+run-screener --preset moderate
+
+# Screen and auto-update your symbol list
+run-screener --preset moderate --top-n 20 --update-symbols
+```
+
+### Using `--top-n`
+
+The `--top-n N` flag limits screening to the N worst-performing stocks from the initial technical scan. This is important if you're on **free API tiers** — Finnhub and Alpaca free plans have strict rate limits, and screening hundreds of symbols will hit those limits quickly.
+
+How it works:
+1. Stage 1 fetches technicals for all candidates (cheap, single API call per symbol)
+2. Survivors are ranked by recent performance (worst performers first — these tend to have the juiciest put premiums)
+3. `--top-n` cuts the list to the top N before hitting the rate-limited Finnhub and options chain APIs in Stages 2-4
+
+This keeps API usage low while focusing on the most promising wheel candidates. Start with `--top-n 15` on free accounts and increase as your rate limits allow.
 
 ### Presets
 
