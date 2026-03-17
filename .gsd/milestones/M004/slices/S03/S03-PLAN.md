@@ -48,7 +48,7 @@
 
 ## Tasks
 
-- [ ] **T01: Scaffold Next.js project and create Supabase client utilities** `est:30m`
+- [x] **T01: Scaffold Next.js project and create Supabase client utilities** `est:30m`
   - Why: Everything depends on the project existing. The Supabase browser/server clients are consumed by middleware, auth pages, and the API client.
   - Files: `apps/web/package.json`, `apps/web/next.config.ts`, `apps/web/tsconfig.json`, `apps/web/tailwind.config.ts`, `apps/web/app/layout.tsx`, `apps/web/app/page.tsx`, `apps/web/lib/supabase/client.ts`, `apps/web/lib/supabase/server.ts`, `apps/web/.env.local.example`
   - Do: Run `npx create-next-app@latest apps/web --typescript --tailwind --app --src-dir --no-import-alias --use-npm`. Install `@supabase/ssr @supabase/supabase-js`. Create `lib/supabase/client.ts` with `createBrowserClient()` wrapper using `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Create `lib/supabase/server.ts` with `createServerClient()` wrapper using `cookies()` from `next/headers` with `getAll`/`setAll` handlers. Add `next.config.ts` rewrite: `/api/:path*` → `http://localhost:8000/api/:path*` for dev proxy. Create `.env.local.example` documenting required env vars. Root `app/page.tsx` redirects to `/dashboard`.

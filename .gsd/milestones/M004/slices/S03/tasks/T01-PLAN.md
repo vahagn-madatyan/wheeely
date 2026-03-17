@@ -66,6 +66,13 @@ Create the `apps/web/` Next.js 15 App Router project with TypeScript + Tailwind 
 - `apps/web/src/lib/supabase/client.ts` and `server.ts` exist and import correctly from `@supabase/ssr`
 - `apps/web/.env.local.example` documents `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 
+## Observability Impact
+
+- **Supabase client init failures:** If `NEXT_PUBLIC_SUPABASE_URL` or `NEXT_PUBLIC_SUPABASE_ANON_KEY` are missing/invalid, `createBrowserClient()` and `createServerClient()` will throw at runtime. These surface as browser console errors (client) or server terminal errors (server).
+- **API proxy rewrite:** Requests to `/api/:path*` proxy to `http://localhost:8000/api/:path*`. Failures surface as 502/504 in the browser Network tab when FastAPI isn't running.
+- **Build verification:** `npm run build` in `apps/web/` catches all TypeScript and import errors at build time. Zero-error build is the primary correctness signal.
+- **Inspection:** Run `cat apps/web/src/lib/supabase/client.ts` and `server.ts` to verify Supabase wiring. Check `apps/web/next.config.ts` for rewrite rules.
+
 ## Inputs
 
 - No prior task output — this is the first task in S03
