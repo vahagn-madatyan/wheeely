@@ -51,7 +51,7 @@
   - Verify: `find apps/api -name '*.py' -not -path '*__pycache__*' | wc -l` returns 16; import smoke test prints "Wheeely Screening API"
   - Done when: All 16 source files present on current branch, API deps installed, import succeeds without errors
 
-- [ ] **T02: Run full test suites and validate S01 contracts** `est:20m`
+- [x] **T02: Run full test suites and validate S01 contracts** `est:20m`
   - Why: S01's contracts are only proven when both the 425 CLI tests (CLI-COMPAT-01) and 31+ API tests (WEB-11) pass. This is the slice's objective stopping condition.
   - Files: `apps/api/tests/test_screen_endpoints.py`, `apps/api/tests/test_positions_account.py`, `apps/api/tests/test_task_store.py`, `apps/api/tests/test_client_factory.py`, `tests/` (existing CLI tests)
   - Do: (1) Run `python -m pytest tests/ -q` and confirm 425 tests pass. (2) Run `python -m pytest apps/api/tests/ -v` and confirm 31+ tests pass. (3) If any tests fail, diagnose and fix — likely causes are missing deps or import path issues, not logic bugs. (4) Verify key contract assertions: submit returns 202, poll returns completed with typed results, unknown run_id returns 404, invalid preset returns 400, missing keys returns 422, API errors return 502.
