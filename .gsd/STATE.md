@@ -1,7 +1,7 @@
 # GSD State
 
 **Active Milestone:** M004: Free Tier Online
-**Active Slice:** S02: Supabase auth + database + encrypted key storage
+**Active Slice:** S03: Next.js shell + auth flow
 **Phase:** executing
 **Requirements Status:** 14 active · 31 validated · 8 deferred · 3 out of scope
 
@@ -12,11 +12,10 @@
 - 🔄 **M004:** Free Tier Online
 
 ## Recent Decisions
-- D059: asyncpg for async Supabase Postgres access
-- D060: HS256 JWT verification with SUPABASE_JWT_SECRET
+- None recorded
 
 ## Blockers
 - None
 
 ## Next Action
-Execute S02/T01 (Build envelope encryption service with tests).
+Execute T01 of S03 (scaffold Next.js project and Supabase clients).
