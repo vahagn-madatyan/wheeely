@@ -85,6 +85,14 @@ Create the authenticated app shell layout with sidebar navigation, placeholder p
 - Click "Sign out" → redirected to `/login`
 - In browser devtools: `apiFetch('/api/keys/status')` sends `Authorization: Bearer <token>` header on network request
 
+## Observability Impact
+
+- **API client auth headers:** Browser DevTools Network tab shows `Authorization: Bearer <token>` on any `apiFetch()` call. Missing/expired tokens surface as 401 responses from FastAPI.
+- **Logout flow:** Sign-out clears Supabase `sb-*` cookies (visible in DevTools → Application → Cookies). Subsequent navigation triggers middleware 307 redirect to `/login`.
+- **Session errors:** `apiFetch()` throws `AuthSessionError` when no session exists — callers can catch and redirect. Browser console shows the error if uncaught.
+- **Sidebar rendering:** Server component layout fetches user via `getUser()` — if middleware lets an unauthenticated request through (misconfiguration), `user` is null and email display is blank.
+- **Failure visibility:** Build-time type errors caught by `npm run build`. Runtime navigation errors visible in browser console. Middleware redirect chain visible as 307s in Network tab.
+
 ## Inputs
 
 - `apps/web/src/lib/supabase/client.ts` — browser client (T01)
