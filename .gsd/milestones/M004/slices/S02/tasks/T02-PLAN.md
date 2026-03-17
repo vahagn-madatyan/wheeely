@@ -59,6 +59,14 @@ The migration targets Supabase-managed Postgres, which means: `auth.users` table
 - `source .venv/bin/activate && python -m pytest tests/ -q` — 425 CLI tests still pass
 - `source .venv/bin/activate && python -m pytest apps/api/tests/ -q` — 31 S01 tests still pass
 
+## Observability Impact
+
+- **Database pool health:** `get_db_pool()` raises `ValueError` with message `"DATABASE_URL environment variable is not set"` if env var missing — visible at app startup.
+- **Connection pool metrics:** asyncpg pool created with `min_size=2, max_size=10` — pool exhaustion surfaces as connection timeout errors in downstream endpoint logs.
+- **Schema contract:** Migration file is the source of truth for table structure. `\d profiles`, `\d api_keys`, `\d screening_runs`, `\d screening_results` in Supabase SQL editor confirms schema applied correctly.
+- **RLS verification:** Queries without authenticated role return zero rows (not errors) — test by querying tables without `auth.uid()` context.
+- **No runtime logging from this module** — database.py is infrastructure plumbing; observability comes from the endpoints that use it.
+
 ## Inputs
 
 - `apps/api/requirements.txt` — file from T01 with `cryptography` already added

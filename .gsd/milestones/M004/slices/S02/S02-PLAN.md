@@ -53,7 +53,7 @@
   - Verify: `source .venv/bin/activate && pip install cryptography>=43.0.0 && python -m pytest apps/api/tests/test_encryption.py -v`
   - Done when: All encryption tests pass; encrypt→decrypt returns original for all inputs; wrong KEK raises; nonces are unique
 
-- [ ] **T02: Write database schema migration and async connection pool** `est:30m`
+- [x] **T02: Write database schema migration and async connection pool** `est:30m`
   - Why: The SQL schema defines the contract all downstream slices consume (S03 needs profiles, S04 needs api_keys, S05/S06 need screening tables). The connection pool is needed by key management endpoints.
   - Files: `apps/api/migrations/001_initial_schema.sql`, `apps/api/services/database.py`, `apps/api/requirements.txt`
   - Do: Create `apps/api/migrations/` directory. Write `001_initial_schema.sql` with all 4 tables (profiles, api_keys, screening_runs, screening_results), RLS policies using `(select auth.uid())` subselect pattern, profile creation trigger (`handle_new_user` function). Add `asyncpg>=0.29.0` to requirements.txt. Implement `database.py` with `get_db_pool()` that creates/caches an asyncpg connection pool from `DATABASE_URL` env var, and `get_db()` async dependency that yields a connection from the pool. Schema must reference `auth.users` for foreign key on profiles and use `to authenticated` role in RLS policies.
