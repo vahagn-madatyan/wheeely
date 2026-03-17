@@ -46,7 +46,7 @@
 
 ## Tasks
 
-- [ ] **T01: Build envelope encryption service with tests** `est:30m`
+- [x] **T01: Build envelope encryption service with tests** `est:30m`
   - Why: Encryption is the highest-risk piece with zero external dependencies — proves D054 round-trip works in isolation before anything else
   - Files: `apps/api/services/encryption.py`, `apps/api/tests/test_encryption.py`, `apps/api/requirements.txt`
   - Do: Add `cryptography>=43.0.0` to requirements.txt. Implement `encrypt_value(plaintext: str)` returning `(encrypted_value, encrypted_dek, nonce, dek_nonce)` tuple and `decrypt_value(encrypted_value, encrypted_dek, nonce, dek_nonce)` returning plaintext string. Use AESGCM with 256-bit keys. KEK loaded from `APP_ENCRYPTION_SECRET` env var (base64-encoded 32 bytes). Generate fresh random DEK + nonces per call. Write comprehensive tests: round-trip, wrong KEK, nonce uniqueness across calls, empty string, long string, binary-safe values.

@@ -49,6 +49,12 @@ Implement the envelope encryption service that all API key storage flows depend 
 - `source .venv/bin/activate && python -m pytest tests/ -q` — 425 CLI tests still pass
 - `source .venv/bin/activate && python -m pytest apps/api/tests/ -q` — S01 tests still pass (31)
 
+## Observability Impact
+
+- **New inspection surface:** `encrypt_value()` / `decrypt_value()` are pure functions with no logging — correctness is verified entirely through tests. No runtime signals are emitted by this module (crypto ops should not log key material).
+- **Failure visibility:** Missing or malformed `APP_ENCRYPTION_SECRET` raises `ValueError` with a descriptive message (no key material in the message). Wrong KEK at decrypt time raises `cryptography.exceptions.InvalidTag` — callers must catch and return a generic 500 (never expose crypto errors to users).
+- **Future agent inspection:** Run `python -m pytest apps/api/tests/test_encryption.py -v` to verify the encryption service works. Check that `APP_ENCRYPTION_SECRET` is set and base64-decodes to exactly 32 bytes.
+
 ## Inputs
 
 - `apps/api/requirements.txt` — existing file with FastAPI, uvicorn, httpx, pytest-asyncio, pydantic
