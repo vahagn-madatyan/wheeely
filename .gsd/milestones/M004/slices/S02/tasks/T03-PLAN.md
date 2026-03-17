@@ -99,6 +99,13 @@ The key management Pydantic schemas are defined here (not in T04) so T04 can foc
 - `source .venv/bin/activate && python -m pytest apps/api/tests/ -q` — S01 tests still pass
 - `source .venv/bin/activate && python -m pytest tests/ -q` — 425 CLI tests still pass
 
+## Observability Impact
+
+- **New log events:** `logger.warning("auth_failed", extra={"reason": ...})` emitted on expired, malformed, or invalid tokens — enables auth failure monitoring.
+- **Inspection surface:** `get_current_user()` dependency returns 401/403 with structured `detail` messages describing failure reason (expired, invalid, missing sub). No secrets in error responses.
+- **Failure visibility:** Missing `SUPABASE_JWT_SECRET` env var raises `ValueError` at decode time — surfaces immediately on first authenticated request, not silently.
+- **Downstream impact:** T04 endpoints will depend on `get_current_user` — auth failures propagate as 401/403 before any business logic runs.
+
 ## Inputs
 
 - `apps/api/schemas.py` — existing file with `AlpacaKeysMixin`, screen/position models (do not modify these)

@@ -60,7 +60,7 @@
   - Verify: `source .venv/bin/activate && pip install asyncpg>=0.29.0 && python -c "import asyncpg; print('asyncpg OK')"` and validate SQL syntax with a basic parse check
   - Done when: Migration SQL file exists with all 4 tables, RLS policies, and trigger. `database.py` exports `get_db_pool()` and `get_db()`. asyncpg is installed.
 
-- [ ] **T03: Build JWT auth middleware with Pydantic schemas and tests** `est:30m`
+- [x] **T03: Build JWT auth middleware with Pydantic schemas and tests** `est:30m`
   - Why: JWT verification is the gateway for all authenticated endpoints. Key management schemas define the API contract for S04's frontend.
   - Files: `apps/api/services/auth.py`, `apps/api/tests/test_auth.py`, `apps/api/schemas.py`, `apps/api/requirements.txt`
   - Do: Add `python-jose[cryptography]>=3.3.0` to requirements.txt. Implement `get_current_user()` as a FastAPI dependency using `HTTPBearer` + `jose.jwt.decode()` with HS256 algorithm, `SUPABASE_JWT_SECRET` from env var, audience="authenticated". Returns user_id (UUID string from `sub` claim). Add Pydantic models to `schemas.py`: `KeyStoreRequest` (key_value: str, is_paper: Optional[bool]), `KeyStatusResponse` (provider: str, connected: bool, is_paper: Optional[bool]), `KeyVerifyResponse` (provider: str, valid: bool, error: Optional[str]). Write auth tests: valid token → user_id, expired token → 401, missing Authorization → 403, malformed token → 401, missing `sub` claim → 401. Tests must craft JWTs with `python-jose` using a test secret.

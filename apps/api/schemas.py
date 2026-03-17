@@ -153,3 +153,42 @@ class AccountResponse(BaseModel):
     portfolio_value: str
     cash: str
     capital_at_risk: float
+
+
+# ---------------------------------------------------------------------------
+# Key management schemas (S02 — encrypted key storage)
+# ---------------------------------------------------------------------------
+
+
+class KeyStoreRequest(BaseModel):
+    """Request body for storing an API key (plaintext — encrypted at rest)."""
+
+    key_value: str = Field(..., description="Plaintext API key value to store")
+    is_paper: Optional[bool] = Field(
+        None, description="Paper trading flag (only used for alpaca provider)"
+    )
+
+
+class KeyStatusItem(BaseModel):
+    """Status of a single provider's stored keys — never exposes values."""
+
+    provider: str
+    connected: bool
+    is_paper: Optional[bool] = None
+    key_names: list[str] = Field(
+        ..., description='Which key names are stored, e.g. ["api_key", "secret_key"]'
+    )
+
+
+class KeyStatusResponse(BaseModel):
+    """Aggregate status of all stored providers."""
+
+    providers: list[KeyStatusItem]
+
+
+class KeyVerifyResponse(BaseModel):
+    """Result of verifying a provider's stored credentials."""
+
+    provider: str
+    valid: bool
+    error: Optional[str] = None
