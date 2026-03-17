@@ -64,7 +64,7 @@ This milestone is complete only when all are true:
 - [x] **S02: Supabase auth + database + encrypted key storage** `risk:high` `depends:[]`
   > After this: Supabase project has `profiles`, `api_keys`, `screening_runs`, `screening_results` tables with RLS. FastAPI auth middleware verifies Supabase JWTs. API keys encrypt/decrypt round-trip via envelope encryption. Verified by auth tests, encryption round-trip tests, and RLS policy tests against real Supabase.
 
-- [ ] **S03: Next.js shell + auth flow** `risk:medium` `depends:[S02]`
+- [x] **S03: Next.js shell + auth flow** `risk:medium` `depends:[S02]`
   > After this: User visits the app in a browser, signs up with email, logs in, sees an authenticated app shell with sidebar nav (Dashboard, Put Screener, Call Screener, Settings). Logout works. Unauthenticated users are redirected to login. Verified in browser against running dev server.
 
 - [ ] **S04: BYOK key management UI** `risk:medium` `depends:[S02, S03]`

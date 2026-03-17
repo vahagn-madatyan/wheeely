@@ -3,11 +3,11 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "options-wheel"
+name = "wheel-it"
 version = "0.1.0"
 description = "An automated options wheel trading strategy."
 authors = [
-    { name = "Your Name", email = "your.email@example.com" }
+    { name = "Vahagn Madatyan" }
 ]
 readme = "README.md"
 requires-python = ">=3.8"
@@ -28,6 +28,7 @@ dependencies = [
 ]
 
 [project.scripts]
+wheelit = "scripts.run_strategy:main"
 run-strategy = "scripts.run_strategy:main"
 run-screener = "scripts.run_screener:main"
 run-call-screener = "scripts.run_call_screener:main"
