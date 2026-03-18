@@ -1,7 +1,7 @@
 # GSD State
 
 **Active Milestone:** M004: Free Tier Online
-**Active Slice:** S04: BYOK key management UI
+**Active Slice:** S05: Screener UI
 **Phase:** executing
 **Requirements Status:** 14 active · 31 validated · 8 deferred · 3 out of scope
 
@@ -18,4 +18,4 @@
 - None
 
 ## Next Action
-Execute T01 of S04 (build Settings page with provider cards and CRUD flows).
+Execute T01 of S05: switch screen + positions endpoints to auth + DB-stored keys.
