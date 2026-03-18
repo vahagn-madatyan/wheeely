@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "wheel-it"
-version = "0.1.3"
+version = "0.2.0"
 description = "An automated options wheel trading strategy."
 authors = [
     { name = "Vahagn Madatyan" }
