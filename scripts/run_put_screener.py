@@ -9,7 +9,7 @@ Usage:
 import logging as stdlib_logging
 from enum import Enum
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Optional
 
 import typer
 import yaml
@@ -29,6 +29,8 @@ from screener.config_loader import (
 
 logger = stdlib_logging.getLogger(__name__)
 
+SYMBOLS_FILE = Path(__file__).parent.parent / "config" / "symbol_list.txt"
+
 app = typer.Typer(help="Screen cash-secured put opportunities across multiple symbols.")
 
 
@@ -40,14 +42,14 @@ class PresetName(str, Enum):
 
 @app.command()
 def run(
-    symbols: Annotated[
-        list[str],
-        typer.Argument(help="Stock symbols to screen (e.g. AAPL MSFT GOOG)"),
-    ],
     buying_power: Annotated[
         float,
         typer.Option("--buying-power", help="Available cash for securing puts"),
     ],
+    symbols: Annotated[
+        Optional[list[str]],
+        typer.Argument(help="Stock symbols to screen (e.g. AAPL MSFT GOOG). Reads config/symbol_list.txt if omitted."),
+    ] = None,
     preset: Annotated[
         PresetName | None,
         typer.Option(help="Override config preset [conservative|moderate|aggressive]"),
@@ -89,6 +91,21 @@ def run(
 
     # Create Alpaca clients
     broker = create_broker_client()
+
+    # Load from symbol_list.txt if no symbols provided
+    if not symbols:
+        if not SYMBOLS_FILE.exists():
+            Console(stderr=True).print(
+                f"[red]No symbols provided and {SYMBOLS_FILE} not found.[/red]"
+            )
+            raise typer.Exit(code=1)
+        symbols = [line.strip() for line in SYMBOLS_FILE.read_text().splitlines() if line.strip()]
+        if not symbols:
+            Console(stderr=True).print(
+                f"[red]{SYMBOLS_FILE} is empty. Provide symbols or run the screener first.[/red]"
+            )
+            raise typer.Exit(code=1)
+        console.print(f"[dim]Loaded {len(symbols)} symbols from {SYMBOLS_FILE}[/dim]")
 
     symbols = [s.upper() for s in symbols]
 
