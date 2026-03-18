@@ -70,7 +70,7 @@ This milestone is complete only when all are true:
 - [x] **S04: BYOK key management UI** `risk:medium` `depends:[S02, S03]`
   > After this: User navigates to Settings, enters Alpaca key+secret with paper/live toggle and Finnhub key. Keys are stored encrypted via the API. Connection status shows green/red badges after verification. User can delete keys. Verified in browser with real key storage and connectivity check.
 
-- [ ] **S05: Screener UI** `risk:medium` `depends:[S01, S04]`
+- [x] **S05: Screener UI** `risk:medium` `depends:[S01, S04]`
   > After this: User navigates to Put Screener, selects a preset, enters symbols and buying power, clicks Run. Progress indicator shows while background task runs. Results appear in a sortable table matching CLI columns (symbol, strike, DTE, premium, delta, OI, spread, annualized return). Call Screener works similarly with symbol + cost basis. Verified in browser with real screener results.
 
 - [ ] **S06: Positions dashboard + rate limiting** `risk:low` `depends:[S01, S04]`

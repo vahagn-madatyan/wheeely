@@ -50,7 +50,7 @@
 - Source: user
 - Primary owning slice: M004/S05
 - Supporting slices: M004/S01
-- Validation: unmapped
+- Validation: Put screener page compiled and in build output (S05). 67 API tests pass including auth+key-retrieval. Full live UAT pending S07.
 
 ### WEB-06 — User can run the call screener from a browser and see ranked results
 - Class: primary-user-loop
