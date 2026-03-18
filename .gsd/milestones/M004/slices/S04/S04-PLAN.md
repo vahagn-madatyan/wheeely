@@ -45,7 +45,7 @@
 
 ## Tasks
 
-- [ ] **T01: Build Settings page with provider cards, key forms, and all CRUD flows** `est:40m`
+- [x] **T01: Build Settings page with provider cards, key forms, and all CRUD flows** `est:40m`
   - Why: Delivers the complete key management UI — all 4 requirements (WEB-02, WEB-03, WEB-04, WEB-13) in a single page component. Backend endpoints are tested; this wires the frontend to them.
   - Files: `apps/web/src/app/(app)/settings/page.tsx`
   - Do: Replace placeholder with `'use client'` component. State for provider status, form inputs, loading/error per provider. `useEffect` fetches `GET /api/keys/status` on mount. Render Alpaca card (api_key + secret_key password inputs + paper/live toggle) and Finnhub card (api_key password input). "Save & Verify" handler: store keys via sequential POST calls (Alpaca: api_key first, then secret_key; Finnhub: single call), then auto-verify via `POST /api/keys/{provider}/verify`, update badge. Delete handler: `window.confirm()` → `DELETE /api/keys/{provider}` → re-fetch status. Green/red badges, loading spinners, error alerts matching login page patterns. All API calls via `apiFetch()`.

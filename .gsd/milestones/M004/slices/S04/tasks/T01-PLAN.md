@@ -114,6 +114,13 @@ The backend endpoints are fully built and tested in S02 (14 endpoint tests in `t
 - `apps/web/src/app/(auth)/login/page.tsx` — reference for Tailwind styling patterns (inputs, buttons, error alerts, loading states)
 - API contract from `apps/api/schemas.py` — response shapes for key endpoints (documented in steps above)
 
+## Observability Impact
+
+- **New signals:** Each provider card renders a `role="alert"` div on API errors (network failures, partial store, verify failures). Green/gray connection badges give instant visual signal of provider state.
+- **Inspection surfaces:** `GET /api/keys/status` is the single source of truth for connection state — call it from browser DevTools or curl to inspect. Provider cards reflect this state on every mount and after every mutation.
+- **Failure visibility:** Partial Alpaca store (api_key succeeds, secret_key fails) surfaces an explicit inline error "Failed to store secret key — please retry". Verify failures show the backend error message verbatim. Network failures show a generic fetch error.
+- **Redaction:** Key values are in `type="password"` inputs, never logged or displayed post-submission. Only key_names (e.g. "api_key", "secret_key") appear in the connected-state UI.
+
 ## Expected Output
 
 - `apps/web/src/app/(app)/settings/page.tsx` — complete `'use client'` Settings page with provider cards, forms, status badges, and all CRUD handlers (~200-300 lines)
