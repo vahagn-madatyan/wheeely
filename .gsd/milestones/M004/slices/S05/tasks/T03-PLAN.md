@@ -64,6 +64,14 @@ Build the Call Screener page following the same pattern as the Put Screener (T02
 - T01 output — `POST /api/screen/calls` now expects body `{ symbol: string, cost_basis: number, preset: string }` + Bearer token. Returns `{ run_id, status }`. Poll same as puts.
 - `apps/api/schemas.py` — `CallResultSchema` defines: symbol, underlying, strike, dte, premium, delta, oi, spread, annualized_return, cost_basis
 
+## Observability Impact
+
+- **Key-status gate:** If Alpaca not connected, page shows "Connect your Alpaca API keys" — inspect by looking for that text on load.
+- **Polling state:** "Screening in progress…" text + spinner visible during active poll. Network tab shows `GET /api/screen/runs/{run_id}` at 2s intervals.
+- **Error display:** All API errors render in `role="alert"` divs — check for red alert boxes on page.
+- **Sort state:** Click any sortable column header — ▲/▼ indicator appears next to active sort column.
+- **Failure visibility:** If screening completes with no results, table shows "No results found". If screening fails, poll returns `status: "failed"` and error text is displayed in alert.
+
 ## Expected Output
 
 - `apps/web/src/app/(app)/screener/calls/page.tsx` — full call screener page replacing the placeholder (~180-220 lines)

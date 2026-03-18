@@ -60,7 +60,7 @@
   - Verify: `cd apps/web && npm run build` — zero errors, `/screener/puts` in build output
   - Done when: Build passes. Put Screener page compiles with form, polling logic, and results table using shared component.
 
-- [ ] **T03: Build Call Screener page reusing shared results table** `est:20m`
+- [x] **T03: Build Call Screener page reusing shared results table** `est:20m`
   - Why: Delivers WEB-06 — the second half of the wheel. Reuses shared component from T02.
   - Files: `apps/web/src/app/(app)/screener/calls/page.tsx`
   - Do: Build Call Screener page following the same pattern as T02's put screener. Form: symbol `<input type="text">`, cost basis `<input type="number">`, preset `<select>`. Submit via `POST /api/screen/calls`, poll same way. Use `ScreenerResultsTable` with call-specific column definitions (adds Cost Basis column). Same key status check, polling, error handling, and cleanup patterns as put screener.
