@@ -22,6 +22,7 @@ from apps.api.services.auth import get_current_user
 from apps.api.services.clients import create_alpaca_clients
 from apps.api.services.database import get_db
 from apps.api.services.key_retrieval import retrieve_alpaca_keys
+from apps.api.services.rate_limiter import RateLimiter, get_rate_limiter
 from apps.api.services.task_store import TaskStatus
 
 from screener.config_loader import ScreenerConfig, load_preset
@@ -49,12 +50,16 @@ async def submit_put_screen(
     request: Request,
     user_id: str = Depends(get_current_user),
     db=Depends(get_db),
+    rate_limiter: RateLimiter = Depends(get_rate_limiter),
 ):
     """Submit a put screening run.
 
     Returns 202 immediately with a run_id. Poll GET /api/screen/runs/{run_id}
     for status and results.
     """
+    # Rate limit check — BEFORE key retrieval or task submission
+    await rate_limiter.check_rate_limit(user_id)
+
     store = _get_task_store(request)
 
     # Validate preset and build config server-side
@@ -118,12 +123,16 @@ async def submit_call_screen(
     request: Request,
     user_id: str = Depends(get_current_user),
     db=Depends(get_db),
+    rate_limiter: RateLimiter = Depends(get_rate_limiter),
 ):
     """Submit a call screening run.
 
     Returns 202 immediately with a run_id. Poll GET /api/screen/runs/{run_id}
     for status and results.
     """
+    # Rate limit check — BEFORE key retrieval or task submission
+    await rate_limiter.check_rate_limit(user_id)
+
     store = _get_task_store(request)
 
     try:
