@@ -11,6 +11,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from apps.api.services.task_store import TaskStore, periodic_cleanup
 from apps.api.services.rate_limiter import RateLimiter
@@ -61,10 +62,15 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS — allow all origins for dev; S07 will tighten this
+# CORS — origins from env var; defaults to ["*"] for local dev
+_cors_raw = os.environ.get("CORS_ORIGINS", "*")
+_cors_origins = (
+    ["*"] if _cors_raw.strip() == "*" else [o.strip() for o in _cors_raw.split(",")]
+)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -73,3 +79,9 @@ app.add_middleware(
 app.include_router(screen.router)
 app.include_router(positions.router)
 app.include_router(keys.router)
+
+
+@app.get("/api/health")
+async def health_check():
+    """Render liveness/readiness probe — returns 200 with status ok."""
+    return JSONResponse({"status": "ok"})
