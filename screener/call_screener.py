@@ -28,9 +28,6 @@ logger = stdlib_logging.getLogger(__name__)
 
 _default_console = Console()
 
-# DTE range for call screening — same as put screener pipeline (D032)
-_CALL_DTE_MIN = 14
-_CALL_DTE_MAX = 60
 
 
 # ---------------------------------------------------------------------------
@@ -121,10 +118,12 @@ def screen_calls(
 
     oi_min = config.options.options_oi_min
     spread_max = config.options.options_spread_max
+    dte_min = config.options.dte_min
+    dte_max = config.options.dte_max
 
     today = date.today()
-    min_exp = today + timedelta(days=_CALL_DTE_MIN)
-    max_exp = today + timedelta(days=_CALL_DTE_MAX)
+    min_exp = today + timedelta(days=dte_min)
+    max_exp = today + timedelta(days=dte_max)
 
     # Step 1: Fetch call contracts
     try:
@@ -143,7 +142,7 @@ def screen_calls(
         return []
 
     if not contracts:
-        logger.debug("No call contracts found for %s in DTE range %d–%d", symbol, _CALL_DTE_MIN, _CALL_DTE_MAX)
+        logger.debug("No call contracts found for %s in DTE range %d–%d", symbol, dte_min, dte_max)
         return []
 
     # Step 2: Filter to strikes >= cost basis

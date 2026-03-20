@@ -23,8 +23,6 @@ from screener.call_screener import (
     compute_call_annualized_return,
     render_call_results_table,
     screen_calls,
-    _CALL_DTE_MIN,
-    _CALL_DTE_MAX,
 )
 from screener.config_loader import ScreenerConfig, load_preset
 
@@ -514,11 +512,12 @@ class TestScreenCalls:
 
 
 class TestDTERange:
-    """DTE range constants match put screener convention."""
+    """DTE range defaults on OptionsConfig."""
 
-    def test_dte_range_values(self):
-        assert _CALL_DTE_MIN == 14
-        assert _CALL_DTE_MAX == 60
+    def test_dte_range_defaults(self):
+        config = ScreenerConfig()
+        assert config.options.dte_min == 14
+        assert config.options.dte_max == 60
 
 
 # ===========================================================================

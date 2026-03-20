@@ -93,11 +93,29 @@ This keeps API usage low while focusing on the most promising wheel candidates. 
 | Avg Volume Min | 1M | 500K | 200K |
 | HV Percentile Min | 50 | 30 | 20 |
 | Earnings Exclusion | 21 days | 14 days | 7 days |
+| DTE Min | 21 | 14 | 7 |
+| DTE Max | 45 | 60 | 60 |
 | Options OI Min | 500 | 100 | 50 |
 | Options Spread Max | 5% | 10% | 20% |
 | Sector Exclusions | Biotech, Cannabis, O&G | Cannabis | None |
 
 Custom overrides go in `config/screener.yaml`. Preset files are in `config/presets/`.
+
+#### Weekly DTE Example
+
+To target weekly expirations (7 DTE), add to `config/screener.yaml`:
+
+```yaml
+options:
+  dte_min: 7
+  dte_max: 8
+```
+
+Or use the aggressive preset which allows 7+ DTE by default:
+
+```bash
+wheelit --screen --top-n 10 --max-risk 5000
+```
 
 ### Pipeline
 

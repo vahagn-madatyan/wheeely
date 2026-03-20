@@ -346,6 +346,50 @@ class TestMaxRiskConfig:
             ScreenerConfig(max_risk=-1)
 
 
+class TestDTEConfig:
+    """Verify DTE min/max on OptionsConfig with defaults and validation."""
+
+    def test_dte_defaults(self):
+        config = OptionsConfig()
+        assert config.dte_min == 14
+        assert config.dte_max == 60
+
+    def test_dte_custom_values(self):
+        config = OptionsConfig(dte_min=7, dte_max=14)
+        assert config.dte_min == 7
+        assert config.dte_max == 14
+
+    def test_dte_min_negative_raises(self):
+        with pytest.raises(ValidationError):
+            OptionsConfig(dte_min=-1)
+
+    def test_dte_max_zero_raises(self):
+        with pytest.raises(ValidationError):
+            OptionsConfig(dte_max=0)
+
+    def test_dte_max_over_365_raises(self):
+        with pytest.raises(ValidationError):
+            OptionsConfig(dte_max=400)
+
+    def test_dte_max_must_exceed_min(self):
+        with pytest.raises(ValidationError):
+            OptionsConfig(dte_min=30, dte_max=30)
+
+    def test_dte_max_less_than_min_raises(self):
+        with pytest.raises(ValidationError):
+            OptionsConfig(dte_min=60, dte_max=14)
+
+    def test_dte_from_preset_aggressive(self):
+        data = load_preset("aggressive")
+        assert data["options"]["dte_min"] == 7
+        assert data["options"]["dte_max"] == 60
+
+    def test_dte_from_preset_conservative(self):
+        data = load_preset("conservative")
+        assert data["options"]["dte_min"] == 21
+        assert data["options"]["dte_max"] == 45
+
+
 class TestFormatValidationErrors:
     """Verify validation error formatting for user-friendly messages."""
 

@@ -30,9 +30,6 @@ logger = stdlib_logging.getLogger(__name__)
 
 _default_console = Console()
 
-# DTE range for put screening — matches call screener per D032
-_PUT_DTE_MIN = 14
-_PUT_DTE_MAX = 60
 
 
 # ---------------------------------------------------------------------------
@@ -133,10 +130,12 @@ def screen_puts(
 
     oi_min = config.options.options_oi_min
     spread_max = config.options.options_spread_max
+    dte_min = config.options.dte_min
+    dte_max = config.options.dte_max
 
     today = date.today()
-    min_exp = today + timedelta(days=_PUT_DTE_MIN)
-    max_exp = today + timedelta(days=_PUT_DTE_MAX)
+    min_exp = today + timedelta(days=dte_min)
+    max_exp = today + timedelta(days=dte_max)
 
     # Step 1: Buying power pre-filter
     affordable_symbols = symbols
@@ -207,8 +206,8 @@ def screen_puts(
         logger.debug(
             "No put contracts found for %s in DTE range %d–%d",
             ", ".join(affordable_symbols),
-            _PUT_DTE_MIN,
-            _PUT_DTE_MAX,
+            dte_min,
+            dte_max,
         )
         return []
 

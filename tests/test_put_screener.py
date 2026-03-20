@@ -10,8 +10,6 @@ from screener.put_screener import (
     PutRecommendation,
     compute_put_annualized_return,
     screen_puts,
-    _PUT_DTE_MIN,
-    _PUT_DTE_MAX,
 )
 from screener.config_loader import ScreenerConfig
 
@@ -219,13 +217,15 @@ class TestComputePutAnnualizedReturn:
 
 
 class TestDTEConstants:
-    """Verify DTE range constants match call screener per D032."""
+    """Verify DTE range defaults on OptionsConfig."""
 
-    def test_put_dte_min(self):
-        assert _PUT_DTE_MIN == 14
+    def test_put_dte_min_default(self):
+        config = ScreenerConfig()
+        assert config.options.dte_min == 14
 
-    def test_put_dte_max(self):
-        assert _PUT_DTE_MAX == 60
+    def test_put_dte_max_default(self):
+        config = ScreenerConfig()
+        assert config.options.dte_max == 60
 
 
 # ---------------------------------------------------------------------------

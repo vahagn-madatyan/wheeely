@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0] - 2026-03-19
+
+### Added
+
+- **Configurable DTE filtering** — `dte_min` and `dte_max` are now configurable via `config/screener.yaml` and preset profiles. Previously hardcoded to 14–60 days across all screeners.
+- **Weekly options support** — set `dte_min: 7` to target weekly expirations. The aggressive preset defaults to `dte_min: 7`.
+- **DTE in presets** — conservative (21–45), moderate (14–60), aggressive (7–60). Override in `config/screener.yaml` under `options:`.
+- **Validation** — `dte_min >= 0`, `dte_max <= 365`, `dte_max > dte_min` enforced by Pydantic.
+
 ## [0.2.1] - 2026-03-18
 
 ### Added

@@ -14,9 +14,15 @@
 #     market_cap_min: 5000000000
 #   technicals:
 #     price_max: 100
+#   options:
+#     dte_min: 7    # weekly expirations
+#     dte_max: 14
 #   sectors:
 #     exclude:
 #       - Utilities
 #       - Real Estate
 
 preset: moderate
+options:
+  dte_min: 7
+  dte_max: 8

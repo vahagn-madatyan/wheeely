@@ -676,10 +676,6 @@ def filter_earnings_proximity(
 # Options chain filters
 # ---------------------------------------------------------------------------
 
-# DTE range for options chain lookup (not user-configurable; wide enough
-# to find tradeable contracts for screening purposes).
-_OPTIONS_DTE_MIN = 14
-_OPTIONS_DTE_MAX = 60
 
 
 def filter_options_oi(stock: ScreenedStock, config: ScreenerConfig) -> FilterResult:
@@ -813,11 +809,12 @@ def _fetch_options_chain_data(
     trade_client,
     option_client,
     stock: ScreenedStock,
+    config: ScreenerConfig | None = None,
 ) -> None:
     """Fetch nearest ATM put data and populate stock fields.
 
-    Fetches put contracts in the 14–60 DTE range, finds the nearest ATM put,
-    gets its snapshot for bid/ask data, and populates:
+    Fetches put contracts in the configured DTE range, finds the nearest ATM
+    put, gets its snapshot for bid/ask data, and populates:
     - stock.best_put_symbol, best_put_strike, best_put_dte
     - stock.options_oi (from contract)
     - stock.best_put_bid, best_put_ask (from snapshot)
@@ -827,13 +824,17 @@ def _fetch_options_chain_data(
         trade_client: Alpaca TradingClient for contract discovery.
         option_client: Alpaca OptionHistoricalDataClient for snapshots.
         stock: ScreenedStock to populate (must have price set).
+        config: ScreenerConfig for DTE range. Uses defaults if None.
     """
     if stock.price is None:
         return
 
+    if config is None:
+        config = ScreenerConfig()
+
     today = date.today()
-    min_exp = today + timedelta(days=_OPTIONS_DTE_MIN)
-    max_exp = today + timedelta(days=_OPTIONS_DTE_MAX)
+    min_exp = today + timedelta(days=config.options.dte_min)
+    max_exp = today + timedelta(days=config.options.dte_max)
 
     try:
         req = GetOptionContractsRequest(
@@ -1026,7 +1027,7 @@ def run_stage_3_options(
         True only if both OI and spread filters passed.
     """
     # Fetch and populate options chain data
-    _fetch_options_chain_data(trade_client, option_client, stock)
+    _fetch_options_chain_data(trade_client, option_client, stock, config)
 
     # Run filters
     results = [

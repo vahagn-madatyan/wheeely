@@ -5,7 +5,7 @@ from copy import deepcopy
 from pathlib import Path
 
 import yaml
-from pydantic import BaseModel, ValidationError, field_validator
+from pydantic import BaseModel, ValidationError, field_validator, model_validator
 
 logger = stdlib_logging.getLogger(__name__)
 
@@ -95,6 +95,8 @@ class OptionsConfig(BaseModel):
     optionable: bool = True
     options_oi_min: int = 100
     options_spread_max: float = 0.10
+    dte_min: int = 14
+    dte_max: int = 60
 
     @field_validator("options_oi_min")
     @classmethod
@@ -111,6 +113,30 @@ class OptionsConfig(BaseModel):
         if v > 1.0:
             raise ValueError("options_spread_max must be <= 1.0 (100%)")
         return v
+
+    @field_validator("dte_min")
+    @classmethod
+    def dte_min_non_negative(cls, v: int) -> int:
+        if v < 0:
+            raise ValueError("dte_min must be >= 0")
+        return v
+
+    @field_validator("dte_max")
+    @classmethod
+    def dte_max_reasonable(cls, v: int) -> int:
+        if v <= 0:
+            raise ValueError("dte_max must be > 0")
+        if v > 365:
+            raise ValueError("dte_max must be <= 365")
+        return v
+
+    @model_validator(mode="after")
+    def dte_range_valid(self) -> "OptionsConfig":
+        if self.dte_max <= self.dte_min:
+            raise ValueError(
+                f"dte_max ({self.dte_max}) must be greater than dte_min ({self.dte_min})"
+            )
+        return self
 
 
 class SectorsConfig(BaseModel):
@@ -271,6 +297,9 @@ def _generate_default_config(path: Path) -> None:
         "#     market_cap_min: 5000000000\n"
         "#   technicals:\n"
         "#     price_max: 100\n"
+        "#   options:\n"
+        "#     dte_min: 7    # weekly expirations\n"
+        "#     dte_max: 14\n"
         "#   sectors:\n"
         "#     exclude:\n"
         "#       - Utilities\n"

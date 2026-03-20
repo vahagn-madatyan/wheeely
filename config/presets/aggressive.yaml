@@ -18,6 +18,8 @@ options:
   optionable: true
   options_oi_min: 50
   options_spread_max: 0.20
+  dte_min: 7
+  dte_max: 60
 sectors:
   include: []
   exclude: []
