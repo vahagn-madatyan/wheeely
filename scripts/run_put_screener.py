@@ -13,6 +13,7 @@ from typing import Annotated, Optional
 
 import typer
 import yaml
+from trogon import Trogon
 from pydantic import ValidationError
 from rich.console import Console
 from rich.panel import Panel
@@ -32,6 +33,7 @@ logger = stdlib_logging.getLogger(__name__)
 SYMBOLS_FILE = Path(__file__).parent.parent / "config" / "symbol_list.txt"
 
 app = typer.Typer(help="Screen cash-secured put opportunities across multiple symbols.")
+Trogon(app, command="tui", help="Open interactive TUI for this command")
 
 
 class PresetName(str, Enum):

@@ -13,6 +13,7 @@ from typing import Annotated
 
 import typer
 import yaml
+from trogon import Trogon
 from pydantic import ValidationError
 from rich.console import Console
 from rich.panel import Panel
@@ -30,6 +31,7 @@ from screener.config_loader import (
 logger = stdlib_logging.getLogger(__name__)
 
 app = typer.Typer(help="Screen covered call opportunities for a stock position.")
+Trogon(app, command="tui", help="Open interactive TUI for this command")
 
 
 class PresetName(str, Enum):

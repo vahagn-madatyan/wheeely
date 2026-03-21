@@ -15,6 +15,7 @@ from typing import Annotated, Optional
 
 import typer
 from pydantic import ValidationError
+from trogon import Trogon
 from rich.console import Console
 from rich.panel import Panel
 
@@ -41,6 +42,7 @@ logger = stdlib_logging.getLogger(__name__)
 SYMBOLS_FILE = Path(__file__).parent.parent / "config" / "symbol_list.txt"
 
 app = typer.Typer(help="Run the options wheel trading strategy.")
+Trogon(app, command="tui", help="Open interactive TUI for this command")
 
 
 class LogLevel(str, Enum):

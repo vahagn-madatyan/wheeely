@@ -17,6 +17,7 @@ from typing import Optional
 
 import typer
 import yaml
+from trogon import Trogon
 from pydantic import ValidationError
 from rich.console import Console
 from rich.panel import Panel
@@ -46,6 +47,7 @@ logger = stdlib_logging.getLogger(__name__)
 SYMBOL_LIST_PATH = Path(__file__).parent.parent / "config" / "symbol_list.txt"
 
 app = typer.Typer(help="Screen stocks for wheel strategy suitability.")
+Trogon(app, command="tui", help="Open interactive TUI for this command")
 
 
 class PresetName(str, Enum):
