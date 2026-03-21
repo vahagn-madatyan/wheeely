@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.0] - 2026-03-21
+
+### Added
+
+- **Interactive TUI mode** — all CLI commands (`run-strategy`, `run-screener`, `run-put-screener`, `run-call-screener`) now support a `tui` subcommand that opens a fullscreen interactive form powered by [Trogon](https://github.com/Textualize/trogon). Configure options visually and execute with `Ctrl+R`.
+- **`trogon` dependency** — added `trogon>=0.6.0` to project dependencies.
+
+### Changed
+
+- **CLI structure** — commands now use subcommands: `run-strategy run [OPTIONS]` for execution and `run-strategy tui` for the interactive form. This applies to all four CLI entry points.
+- **`requires-python`** — bumped minimum from `>=3.8` to `>=3.8.1` for trogon compatibility.
+
 ## [0.3.1] - 2026-03-20
 
 ### Fixed
