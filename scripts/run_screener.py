@@ -17,7 +17,7 @@ from typing import Optional
 
 import typer
 import yaml
-from trogon import Trogon
+from trogon import tui
 from pydantic import ValidationError
 from rich.console import Console
 from rich.panel import Panel
@@ -47,13 +47,15 @@ logger = stdlib_logging.getLogger(__name__)
 SYMBOL_LIST_PATH = Path(__file__).parent.parent / "config" / "symbol_list.txt"
 
 app = typer.Typer(help="Screen stocks for wheel strategy suitability.")
-Trogon(app, command="tui", help="Open interactive TUI for this command")
 
 
 class PresetName(str, Enum):
     conservative = "conservative"
     moderate = "moderate"
     aggressive = "aggressive"
+
+    def __str__(self):
+        return self.value
 
 
 @app.command()
@@ -154,7 +156,9 @@ def run(
 
 
 def main():
-    app()
+    click_app = typer.main.get_command(app)
+    click_app = tui()(click_app)
+    click_app()
 
 
 if __name__ == "__main__":

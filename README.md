@@ -36,13 +36,26 @@ pip install wheel-it
 ### CLI Options
 
 ```bash
-wheelit --fresh-start       # liquidate all positions first (recommended for first run)
-wheelit --screen            # run stock screener before strategy
-wheelit --max-risk 100000   # set total capital budget (default: from config/preset)
-wheelit --strat-log         # enable JSON strategy logging
-wheelit --log-level DEBUG   # set log verbosity
-wheelit --log-to-file       # save logs to file
+wheelit run --fresh-start       # liquidate all positions first (recommended for first run)
+wheelit run --screen            # run stock screener before strategy
+wheelit run --max-risk 100000   # set total capital budget (default: from config/preset)
+wheelit run --strat-log         # enable JSON strategy logging
+wheelit run --log-level DEBUG   # set log verbosity
+wheelit run --log-to-file       # save logs to file
 ```
+
+### Interactive TUI
+
+Every CLI command has an interactive TUI mode powered by [Trogon](https://github.com/Textualize/trogon). Configure options visually in a fullscreen form:
+
+```bash
+wheelit tui
+run-screener tui
+run-put-screener tui
+run-call-screener tui
+```
+
+Use `Ctrl+R` to execute, `Ctrl+C` to quit.
 
 ---
 
@@ -51,25 +64,25 @@ wheelit --log-to-file       # save logs to file
 Find wheel-suitable stocks using Finnhub fundamentals and Alpaca technicals:
 
 ```bash
-run-screener                          # default (moderate) preset
-run-screener --preset conservative    # large-cap, low debt
-run-screener --preset aggressive      # small-cap OK
-run-screener --top-n 20               # only screen the top 20 worst performers
-run-screener --verbose                # show per-filter breakdown
-run-screener --update-symbols         # export results to symbol_list.txt
+run-screener run                          # default (moderate) preset
+run-screener run --preset conservative    # large-cap, low debt
+run-screener run --preset aggressive      # small-cap OK
+run-screener run --top-n 20              # only screen the top 20 worst performers
+run-screener run --verbose               # show per-filter breakdown
+run-screener run --update-symbols        # export results to symbol_list.txt
 ```
 
 ### Recommended Commands
 
 ```bash
 # Best for free-tier API accounts (Alpaca + Finnhub)
-run-screener --preset moderate --top-n 15
+run-screener run --preset moderate --top-n 15
 
 # Full scan if you have paid API access
-run-screener --preset moderate
+run-screener run --preset moderate
 
 # Screen and auto-update your symbol list
-run-screener --preset moderate --top-n 20 --update-symbols
+run-screener run --preset moderate --top-n 20 --update-symbols
 ```
 
 ### Using `--top-n`
@@ -114,7 +127,7 @@ options:
 Or use the aggressive preset which allows 7+ DTE by default:
 
 ```bash
-wheelit --screen --top-n 10 --max-risk 5000
+wheelit run --screen --top-n 10 --max-risk 5000
 ```
 
 ### Pipeline
@@ -135,11 +148,11 @@ Survivors are scored by wheel suitability (capital efficiency 45%, volatility 35
 Explore specific option opportunities:
 
 ```bash
-run-put-screener AAPL MSFT GOOG --buying-power 50000
-run-put-screener AAPL --buying-power 20000 --preset conservative
+run-put-screener run AAPL MSFT GOOG --buying-power 50000
+run-put-screener run AAPL --buying-power 20000 --preset conservative
 
-run-call-screener AAPL --cost-basis 175.00
-run-call-screener AAPL --cost-basis 175.00 --preset conservative
+run-call-screener run AAPL --cost-basis 175.00
+run-call-screener run AAPL --cost-basis 175.00 --preset conservative
 ```
 
 The call screener enforces **strike >= cost basis** so you never sell below your entry. Both rank by annualized return.
